@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>나눠 사기 - 지갑이</title>
+</head>
+<body>
+<h1>나눠 사기</h1>
+
+{% if not s.ready %}
+<p>먼저 설정이 필요해요.</p>
+{% else %}
+<p><strong>{{ s.message }}</strong></p>
+{% if s.note %}<p>{{ s.note }}</p>{% endif %}
+
+{% if s.plan %}
+{% for p in s.plan %}
+{% if p["items"] %}
+<h2>{{ p.label }}</h2>
+<ul>
+  {% for name, price, need_by in p["items"] %}
+  <li>{{ name }} {{ "{:,}".format(price) }}원</li>
+  {% endfor %}
+</ul>
+<p>{{ p.name }} {{ p.stage }} · 하루 여유 {{ "{:,}".format(p.daily) }}원</p>
+{% endif %}
+{% endfor %}
+<p>{{ s.income_note }}</p>
+{% endif %}
+{% endif %}
+
+<p>[이 계획으로 살게요] (준비 중) ·
+  <a href="/cart?{% for i in items %}item={{ i }}&{% endfor %}{% if today_q %}today={{ today_q }}{% endif %}">[직접 고를게요]</a></p>
+<p><a href="/{% if today_q %}?today={{ today_q }}{% endif %}">홈으로</a></p>
+</body>
+</html>

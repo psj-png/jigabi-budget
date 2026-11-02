@@ -2,7 +2,8 @@ from datetime import date
 
 from app.calc import (appointments_sum, daily_margin, estimate_balance, first_day, free_money,
                       min_living, monthly_sum, incomes_sum, period, spent_money, stage,
-                      today_budget, transport_default, max_fare, preview, work_hours)
+                      today_budget, transport_default, max_fare, preview, work_hours,
+                      split_plan)
 
 
 def test_R1_예시_10월30일():
@@ -248,3 +249,45 @@ def test_알바_시간_0점5_올림():
     assert work_hours(189000, 10320) == 18
     assert work_hours(10320, 10320) == 1
     assert work_hours(5000, 0) is None
+
+
+# ---- R13 나눠 사기 ----
+D = date
+롱패딩 = ("롱패딩", 189000, D(2026, 12, 1))
+니트 = ("니트", 49000, None)
+목도리 = ("목도리", 29000, None)
+부츠 = ("부츠", 119000, None)
+다음 = (D(2026, 11, 25), 389900, 30)
+그다음 = (D(2026, 12, 25), 595100, 31)
+
+
+def 이름(plan):
+    # 기간별 [물건 이름들], 하루 여유, 단계
+    return [([n for n, _, _ in p["items"]], p["daily"], p["stage"]) for p in plan]
+
+
+def test_R13_기록_전_예시():
+    이번 = (D(2026, 10, 30), 229900, 26)
+    plan = split_plan([롱패딩, 니트, 목도리, 부츠], [이번, 다음, 그다음], 10000)
+    assert 이름(plan)[:2] == [(["니트", "목도리", "부츠"], 1200, "홀쭉"), (["롱패딩"], 6600, "든든")]
+    assert plan[2]["items"] == []
+
+
+def test_R13_홀쭉_텅텅_경계():
+    # 10/31 기록 후: 이번 하루 여유 1,000이면 홀쭉(넉넉 기준의 10분의 1 이상)
+    이번 = (D(2026, 10, 31), 224100, 25)
+    plan = split_plan([롱패딩, 니트, 목도리, 부츠], [이번, 다음, 그다음], 10000)
+    assert 이름(plan)[:2] == [(["니트", "목도리", "부츠"], 1000, "홀쭉"), (["롱패딩"], 6600, "든든")]
+
+
+def test_R13_필요한_날이_빠르면_이번에_산다():
+    # 롱패딩 필요한 날 11/20: 다음 기간(11/25)에는 못 산다. 모든 기간 홀쭉 이상(②)이 더 일찍(③)보다 먼저
+    이번 = (D(2026, 10, 31), 224100, 25)
+    급한_롱패딩 = ("롱패딩", 189000, D(2026, 11, 20))
+    plan = split_plan([급한_롱패딩, 니트, 목도리, 부츠], [이번, 다음, 그다음], 10000)
+    assert 이름(plan)[:2] == [(["롱패딩"], 1400, "홀쭉"), (["니트", "목도리", "부츠"], 6400, "든든")]
+
+
+def test_R13_해답이_없으면_None():
+    이번 = (D(2026, 10, 30), 229900, 26)
+    assert split_plan([("비싼 것", 2000000, None)], [이번, 다음, 그다음], 10000) is None

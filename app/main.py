@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app import balance as balance_page
-from app import calc, cart, queries, setup
+from app import calc, cart, queries, setup, split
 from app.db import get_conn
 from app.home import make_home
 
@@ -320,3 +320,20 @@ def cart_items_post(request: Request, name: str = Form(min_length=1, max_length=
     finally:
         conn.close()
     return RedirectResponse("/cart" + (f"?today={today}" if today else ""), status_code=303)
+
+
+@app.get("/split")
+def split_get(request: Request, today: str = None, item: list[int] = Query(default=[])):
+    user_id = current_user(request)
+    if user_id is None:
+        return to_start()
+    now = parse_date(today, date.today())
+
+    conn = get_conn()
+    try:
+        data = split.make_split(conn, user_id, now, item)
+    finally:
+        conn.close()
+    return templates.TemplateResponse(request, "split.html", {
+        "s": data, "items": item, "today_q": today,
+    })

@@ -376,3 +376,48 @@ def test_장바구니_기간_마지막_날_밤이면_미리보기_없음(conn):
         conn.commit()
     assert c["ended"] and c["message"] == "이번 기간이 끝났어요. 새 기간에 다시 봐요"
     assert all(i["chip"] is None for i in c["items"])
+
+
+# ---- 나눠 사기 ----
+from app import split
+
+
+@pytest.fixture
+def clean_extra_wishes(conn):
+    yield
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM wish_items WHERE user_id = %s AND name LIKE %s", (USER_ID, "테스트 물건%"))
+    conn.commit()
+
+
+def test_나눠_사기_seed(conn):
+    today = date(2026, 10, 31)  # 기록 후 25일, 여유 돈 224,100
+    ids = [w["item_id"] for w in queries.get_wish_items(conn, USER_ID)]
+    s = split.make_split(conn, USER_ID, today, ids)
+    plan = s["plan"]
+
+    # 다음 기간 11/25~12/24, 그다음 12/25~1/24의 여유 돈
+    assert (plan[1]["free"], plan[1]["days"]) == (389900, 30)
+    assert (plan[2]["free"], plan[2]["days"]) == (595100, 31)
+
+    # calc 테스트 b)와 같은 결과
+    assert [n for n, _, _ in plan[0]["items"]] == ["니트", "목도리", "부츠"]
+    assert (plan[0]["daily"], plan[0]["stage"]) == (1000, "홀쭉")
+    assert [n for n, _, _ in plan[1]["items"]] == ["롱패딩"]
+    assert (plan[1]["daily"], plan[1]["stage"]) == (6600, "든든")
+    assert s["note"] == "필요한 날(12/1)도 맞추고, 최소 생활비도 안 건드려요."
+    assert s["income_note"] == "다음 기간은 예상 수입 67만 원(알바비 42만 + 용돈 25만) 기준이에요."
+    assert (plan[0]["label"], plan[1]["label"], plan[2]["label"]) == \
+        ("지금 · 10/31", "11/25 알바비 들어온 뒤", "12/25 이후")
+
+
+def test_나눠_사기_9개부터는_막는다(conn, clean_extra_wishes):
+    for n in range(5):
+        queries.insert_wish_item(conn, USER_ID, f"테스트 물건{n}", 1000, None)
+    ids = [w["item_id"] for w in queries.get_wish_items(conn, USER_ID)]
+    assert len(ids) == 9
+    s = split.make_split(conn, USER_ID, date(2026, 10, 31), ids)
+    assert s["plan"] is None and s["message"] == "8개까지만 나눠 볼 수 있어요"
+    # 8개는 계산한다
+    s = split.make_split(conn, USER_ID, date(2026, 10, 31), ids[:8])
+    assert s["plan"] is not None

@@ -26,7 +26,7 @@ def get_routines(conn, user_id):
 def get_incomes(conn, user_id):
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT day_of_month, amount, is_main FROM incomes WHERE user_id = %s",
+            "SELECT name, day_of_month, amount, is_main FROM incomes WHERE user_id = %s",
             (user_id,),
         )
         incomes = cur.fetchall()

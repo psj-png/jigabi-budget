@@ -1,5 +1,6 @@
 # 계산 함수 모음. DB 없이 값만 받아서 계산한다 (규칙은 docs/rules.md)
 import calendar
+import itertools
 from datetime import date, timedelta
 
 
@@ -176,3 +177,40 @@ def work_hours(price_sum, wage):
     if wage <= 0:
         return None
     return (price_sum * 2 + wage) // (2 * wage)
+
+
+def split_plan(items, periods, comfort):
+    # R13 나눠 사기: items는 (이름, 가격, 필요한 날 또는 None), periods는 이번·다음·그다음 기간의
+    # (시작일, 여유 돈, 남은 날). 물건마다 세 기간 중 하나에 넣는 경우를 모두 본다.
+    # ① 하루 여유가 0 미만인 기간이 없고, 필요한 날 전(같은 날 포함)에 사는 것만 남긴다
+    # ②~④ 정렬: ② 모든 기간이 홀쭉 이상인 쪽 -> ③ 기다리는 기간 수의 합이 작은 쪽
+    #       -> ④ 세 기간 하루 여유 중 가장 작은 값이 큰 쪽 (같으면 먼저 나온 것)
+    # 돌려주는 값: 기간 세 개의 {"items": [...], "daily": 하루 여유, "stage": 단계}. 해답이 없으면 None
+    best = None
+    best_key = None
+    for combo in itertools.product(range(3), repeat=len(items)):
+        sums = [0, 0, 0]
+        ok = True
+        for item, p in zip(items, combo):
+            sums[p] += item[1]
+            if item[2] is not None and periods[p][0] > item[2]:
+                ok = False  # 필요한 날보다 늦게 사게 됨
+                break
+        if not ok:
+            continue
+
+        dailies = [daily_margin(periods[p][1] - sums[p], periods[p][2]) for p in range(3)]
+        if any(d is None or d < 0 for d in dailies):
+            continue
+
+        stages = [stage(d, comfort) for d in dailies]
+        key = (
+            0 if all(s in ("빵빵", "든든", "홀쭉") for s in stages) else 1,
+            sum(combo),
+            -min(dailies),
+        )
+        if best_key is None or key < best_key:
+            best_key = key
+            best = [{"items": [it for it, p in zip(items, combo) if p == k],
+                     "daily": dailies[k], "stage": stages[k]} for k in range(3)]
+    return best
