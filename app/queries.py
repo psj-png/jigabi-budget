@@ -58,7 +58,8 @@ def get_period(conn, user_id, today):
     with conn.cursor() as cur:
         cur.execute(
             "SELECT start_date, end_date, opening_balance, repay_amount FROM periods "
-            "WHERE user_id = %s AND start_date <= %s AND end_date >= %s",
+            "WHERE user_id = %s AND start_date <= %s AND end_date >= %s "
+            "ORDER BY start_date DESC LIMIT 1",
             (user_id, today, today),
         )
         return cur.fetchone()
@@ -71,5 +72,16 @@ def get_balance_log(conn, user_id, day):
             "SELECT log_date, balance, income_in, spent FROM balance_logs "
             "WHERE user_id = %s AND log_date = %s",
             (user_id, day),
+        )
+        return cur.fetchone()
+
+
+def get_latest_balance_log(conn, user_id, today):
+    # today 이전(오늘 포함) 기록 중 가장 최근 것. 없으면 None
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT log_date, balance, income_in, spent FROM balance_logs "
+            "WHERE user_id = %s AND log_date <= %s ORDER BY log_date DESC LIMIT 1",
+            (user_id, today),
         )
         return cur.fetchone()
