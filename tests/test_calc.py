@@ -159,3 +159,18 @@ def test_R7_약속_교통비도_더한다():
 
 def test_R7_하루_여유가_None이면_None():
     assert today_budget(date(2026, 11, 7), ROUTINES, APPTS, None) is None
+
+
+def test_밤_기록_후_내일_쓸_수_있는_돈():
+    # 10/30 밤 기록(잔액 284,200): 남은 날 25, 여유 돈 224,100, 하루 여유 8,900
+    # 내일(10/31 토) = 알바 교통비 3,100 + 하루 여유 8,900
+    days_left, ml, available, free, daily, _ = 계산(TODAY, True, 284200, TODAY)
+    assert (days_left, free, daily) == (25, 224100, 8900)
+    assert today_budget(date(2026, 10, 31), ROUTINES, APPTS, daily) == 12000
+
+
+def test_기간_마지막_날_밤_기록하면_남은_날_0이고_하루_여유_None():
+    end_day = date(2026, 11, 24)
+    days_left = period(end_day, 25, logged_tonight=True)[2]
+    assert days_left == 0
+    assert daily_margin(100000, days_left) is None

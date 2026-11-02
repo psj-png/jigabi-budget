@@ -61,7 +61,8 @@ def test_홈_화면_값(conn):
     # 10/30 밤 기록이 있는 상태: 남은 날 25, 여유 돈 224,100, 하루 여유 8,900, 든든
     h = make_home(conn, USER_ID, TODAY)
     assert (h["days_left"], h["free"], h["daily"], h["stage"]) == (25, 224100, 8900, "든든")
-    assert h["logged"] and h["budget"] is None and h["missed_days"] == 0
+    # 밤 기록이 있으면 내일(10/31 토) 쓸 수 있는 돈 = 3,100 + 8,900
+    assert h["logged"] and h["budget"] == 12000 and h["missed_days"] == 0
 
     # 여유 돈이 나온 과정 (네 칸)
     assert (h["available"], h["fixed"], h["appt"], h["min_living"], h["repay"]) ==         (534200, 43900, 30000, 236200, 0)

@@ -71,7 +71,7 @@ def make_home(conn, user_id, today):
     }
     if daily is not None:
         home["stage"] = calc.stage(daily, user["comfort_daily"])
-        # 오늘 밤 잔액을 적은 뒤의 R7은 아직 정하지 않아서 보여주지 않는다
-        if not logged:
-            home["budget"] = calc.today_budget(today, routines, appts, daily)
+        # 밤 잔액을 적었으면 내일 날짜로 R7을 계산한다
+        budget_day = today + timedelta(days=1) if logged else today
+        home["budget"] = calc.today_budget(budget_day, routines, appts, daily)
     return home

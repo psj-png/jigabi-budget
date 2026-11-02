@@ -22,9 +22,7 @@
 <p>지갑이 단계: <strong>{{ h.stage }}</strong></p>
 <p>하루 여유: {{ "{:,}".format(h.daily) }}원</p>
 {% if h.budget is not none %}
-<p>오늘 쓸 수 있는 돈: {{ "{:,}".format(h.budget) }}원</p>
-{% elif h.logged %}
-<p>오늘 밤 잔액을 적었어요</p>
+<p>{% if h.logged %}내일{% else %}오늘{% endif %} 쓸 수 있는 돈: {{ "{:,}".format(h.budget) }}원</p>
 {% endif %}
 {% endif %}
 <p>여유 돈: {{ "{:,}".format(h.free) }}원</p>
