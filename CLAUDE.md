@@ -14,6 +14,7 @@ OSS 수업 텀프로젝트(12/6 마감, 교수님은 README만 보고 평가)와
 - `app/main.py` 라우트, `app/db.py` DB 연결, `app/templates/` 화면
 - `db/schema.sql` 테이블 9개, `db/seed.sql` 예시 사람 1명. MySQL 첫 실행 때 자동으로 들어감 (다시 만들려면 `docker compose down -v`)
 - `docs/rules.md` 계산 규칙 R1~R15와 확인용 예시 숫자
+- 테스트는 jigabi_test를 매번 schema+seed로 새로 만들어 쓴다. 개발 DB(jigabi)는 건드리지 않는다.
 
 ## 지킬 것
 
