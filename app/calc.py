@@ -79,9 +79,9 @@ def monthly_sum(start, end, items):
     return total
 
 
-def other_incomes_sum(start, end, incomes):
-    # R2 기간 안에 들어올 다른 수입. 기간을 만든 주 수입(is_main)은 시작 잔액에 이미 있어서 뺀다
-    return monthly_sum(start, end, [i for i in incomes if not i["is_main"]])
+def incomes_sum(start, end, incomes):
+    # R2 기간 안에 들어올 수입. 주 수입도 기간 첫날에 들어오므로 포함한다
+    return monthly_sum(start, end, incomes)
 
 
 def appointments_sum(start, end, appointments):

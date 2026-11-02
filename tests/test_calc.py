@@ -1,7 +1,7 @@
 from datetime import date
 
 from app.calc import (appointments_sum, daily_margin, first_day, free_money,
-                      min_living, monthly_sum, other_incomes_sum, period, stage,
+                      min_living, monthly_sum, incomes_sum, period, stage,
                       today_budget)
 
 
@@ -79,7 +79,7 @@ def 계산(today, logged_tonight, balance, app_start=None):
     start, end, days_left = period(today, 25, app_start=app_start, logged_tonight=logged_tonight)
     f = first_day(today, logged_tonight)
     ml = min_living(f, end, ROUTINES)
-    incomes = other_incomes_sum(f, end, INCOMES)
+    incomes = incomes_sum(f, end, INCOMES)
     free = free_money(balance, incomes, monthly_sum(f, end, FIXED),
                       appointments_sum(f, end, APPTS), ml)
     daily = daily_margin(free, days_left)
@@ -174,3 +174,15 @@ def test_기간_마지막_날_밤_기록하면_남은_날_0이고_하루_여유_
     days_left = period(end_day, 25, logged_tonight=True)[2]
     assert days_left == 0
     assert daily_margin(100000, days_left) is None
+
+
+def test_R2_이번_기간_수입_합은_용돈만():
+    # 10/30~11/24: 알바비 25일은 범위 밖이라 11/1 용돈 250,000만
+    assert incomes_sum(date(2026, 10, 30), date(2026, 11, 24), INCOMES) == 250000
+
+
+def test_R2_다음_기간_주_수입도_포함():
+    # 11/25~12/24: 알바비 420,000(첫날) + 용돈 250,000(12/1) = 670,000
+    assert incomes_sum(date(2026, 11, 25), date(2026, 12, 24), INCOMES) == 670000
+    # 시작 잔액 0이면 쓸 수 있는 돈 670,000 -> rules.md 예시와 같은 값
+    assert 계산(date(2026, 11, 25), False, 0) == (30, 236200, 670000, 389900, 12900, "빵빵")

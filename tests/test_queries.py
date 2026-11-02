@@ -40,7 +40,7 @@ def test_seed_기록_후_예시(conn):
     start, end, days_left = calc.period(TODAY, 25, app_start=per["start_date"], logged_tonight=logged)
     f = calc.first_day(TODAY, logged)
     ml = calc.min_living(f, end, routines)
-    free = calc.free_money(balance, calc.other_incomes_sum(f, end, incomes),
+    free = calc.free_money(balance, calc.incomes_sum(f, end, incomes),
                            calc.monthly_sum(f, end, fixed),
                            calc.appointments_sum(f, end, appts), ml, per["repay_amount"])
     daily = calc.daily_margin(free, days_left)

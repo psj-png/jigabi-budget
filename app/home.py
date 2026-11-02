@@ -44,7 +44,7 @@ def make_home(conn, user_id, today):
     appts = queries.get_appointments(conn, user_id)
 
     min_living = calc.min_living(first, end, routines)
-    incomes_sum = calc.other_incomes_sum(first, end, incomes)
+    incomes_sum = calc.incomes_sum(first, end, incomes)
     fixed_sum = calc.monthly_sum(first, end, fixed)
     appt_sum = calc.appointments_sum(first, end, appts)
     repay = per["repay_amount"]
