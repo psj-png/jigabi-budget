@@ -37,6 +37,7 @@
   <li>= 여유 돈 {{ "{:,}".format(h.free) }}원</li>
 </ul>
 {% endif %}
+<p><a href="/balance{% if today_q %}?today={{ today_q }}{% endif %}">밤 잔액 적기</a></p>
 <p><a href="/wishes">사고 싶은 것</a></p>
 </body>
 </html>

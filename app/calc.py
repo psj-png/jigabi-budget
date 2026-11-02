@@ -135,3 +135,8 @@ def estimate_balance(balance, start, end, routines, fixed, appts, incomes):
             - monthly_sum(start, end, fixed)
             - appointments_sum(start, end, appts)
             - min_living(start, end, routines))
+
+
+def spent_money(prev_balance, income_in, fixed_out, bought, balance):
+    # R10 쓴 돈 = 지난 잔액 + 들어온 돈 - 빠져나간 고정지출 - 기록한 구매 - 지금 잔액
+    return prev_balance + income_in - fixed_out - bought - balance

@@ -1,7 +1,7 @@
 from datetime import date
 
 from app.calc import (appointments_sum, daily_margin, estimate_balance, first_day, free_money,
-                      min_living, monthly_sum, incomes_sum, period, stage,
+                      min_living, monthly_sum, incomes_sum, period, spent_money, stage,
                       today_budget)
 
 
@@ -194,3 +194,8 @@ def test_estimate_balance():
 def test_estimate_balance_start가_end보다_뒤면_그대로():
     assert estimate_balance(284200, date(2026, 11, 25), date(2026, 11, 24),
                             ROUTINES, FIXED, APPTS, INCOMES) == 284200
+
+
+def test_R10_쓴_돈():
+    # seed의 10/30 밤 기록: 지난 잔액 290,000 -> 지금 284,200이면 5,800원 씀
+    assert spent_money(290000, 0, 0, 0, 284200) == 5800

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>밤 잔액 적기 - 지갑이</title>
+</head>
+<body>
+<h1>밤 잔액 적기</h1>
+<p>
+  {% if f.day == today %}<strong>오늘({{ today }})</strong>{% else %}<a href="/balance?day={{ today }}{{ today_q_and }}">오늘({{ today }})</a>{% endif %}
+  |
+  {% if f.day != today %}<strong>어제({{ yesterday }})</strong>{% else %}<a href="/balance?day={{ yesterday }}{{ today_q_and }}">어제({{ yesterday }})</a>{% endif %}
+</p>
+
+{% if error %}
+<p>{{ error }}</p>
+{% elif f.blocked %}
+<p>{{ f.blocked }}</p>
+{% elif not f.ready %}
+<p>기간 정보가 없어요. 홈을 먼저 열어 주세요</p>
+{% else %}
+<form method="post" action="/balance">
+  <input type="hidden" name="day" value="{{ f.day }}">
+  {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+  <p><label>지금 잔액 <input type="number" name="balance" required>원</label></p>
+  {% if f.show_income %}
+  <p><label>들어온 돈 <input type="number" name="income_in" value="{{ f.income_plan }}">원</label></p>
+  {% endif %}
+  <p><button type="submit">저장</button></p>
+</form>
+{% endif %}
+<p><a href="/{% if today_q %}?today={{ today_q }}{% endif %}">홈으로</a></p>
+</body>
+</html>

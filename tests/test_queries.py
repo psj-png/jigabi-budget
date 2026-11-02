@@ -108,3 +108,72 @@ def test_새_기간_만들기(conn):
     assert (h["days_left"], h["free"], h["daily"], h["stage"]) == (30, 614000, 20400, "빵빵")
     assert h["budget"] == 35500  # 수요일: 학교 15,100 + 하루 여유 20,400
     assert h["missed_days"] == 25
+
+
+# ---- 밤 잔액 적기 (DB에 저장하므로 끝나면 seed 상태로 되돌린다) ----
+from app import balance as balance_page
+
+
+@pytest.fixture
+def clean(conn):
+    yield
+    # 테스트에서 넣은 balance_logs·periods 행을 지운다 (seed는 10/30 기록과 첫 기간만)
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM balance_logs WHERE user_id = %s AND log_date <> %s",
+                    (USER_ID, date(2026, 10, 30)))
+        cur.execute("DELETE FROM periods WHERE user_id = %s AND start_date <> %s",
+                    (USER_ID, date(2026, 10, 30)))
+        cur.execute("UPDATE periods SET opening_balance = 290000 WHERE user_id = %s", (USER_ID,))
+    conn.commit()
+
+
+def test_밤_잔액_어제_저장(conn, clean):
+    from app.home import make_home
+
+    # today=11/1에 어제(10/31) 280,000 저장: 지난 잔액 284,200 -> 쓴 돈 4,200
+    assert balance_page.save(conn, USER_ID, date(2026, 11, 1), date(2026, 10, 31), 280000, 0) is None
+    log = queries.get_balance_log(conn, USER_ID, date(2026, 10, 31))
+    assert (log["balance"], log["spent"]) == (280000, 4200)
+
+    h = make_home(conn, USER_ID, date(2026, 11, 1))
+    assert (h["days_left"], h["free"], h["daily"], h["stage"]) == (24, 223000, 9200, "든든")
+    assert h["budget"] == 12300
+
+
+def test_밤_잔액_폼에_예정_수입(conn, clean):
+    # 11/1을 적으려면 그 사이 11/1 용돈 250,000이 있어서 들어온 돈 칸이 채워진다
+    f = balance_page.get_form(conn, USER_ID, date(2026, 11, 1), date(2026, 11, 1))
+    assert f["show_income"] and f["income_plan"] == 250000
+    # 10/31만 적는 폼에는 예정 수입이 없어서 칸을 숨긴다
+    f = balance_page.get_form(conn, USER_ID, date(2026, 11, 1), date(2026, 10, 31))
+    assert not f["show_income"]
+
+
+def test_밤_잔액_기간_시작_전날을_적으면_시작_잔액을_고친다(conn, clean):
+    from app.home import make_home
+
+    today = date(2026, 11, 25)
+    make_home(conn, USER_ID, today)  # 11/25 기간을 먼저 만든다
+
+    # 어제(11/24) 100,000, 들어온 돈 250,000: 284,200 + 250,000 - 43,900 - 100,000 = 390,300
+    assert balance_page.save(conn, USER_ID, today, date(2026, 11, 24), 100000, 250000) is None
+    log = queries.get_balance_log(conn, USER_ID, date(2026, 11, 24))
+    assert log["spent"] == 390300
+    assert queries.get_period(conn, USER_ID, today)["opening_balance"] == 100000
+
+    h = make_home(conn, USER_ID, today)
+    assert (h["free"], h["daily"], h["stage"]) == (489900, 16300, "빵빵")
+    assert h["budget"] == 31400 and h["missed_days"] == 0
+
+
+def test_밤_잔액_오늘_기록이_있으면_어제는_못_적는다(conn, clean):
+    from app.home import make_home
+
+    today = date(2026, 11, 25)
+    make_home(conn, USER_ID, today)
+    assert balance_page.save(conn, USER_ID, today, today, 200000, 0) is None
+
+    message = balance_page.save(conn, USER_ID, today, date(2026, 11, 24), 100000, 0)
+    assert message == "오늘 밤 잔액을 이미 적어서 어제는 못 적어요"
+    assert queries.get_balance_log(conn, USER_ID, date(2026, 11, 24)) is None
+    assert balance_page.get_form(conn, USER_ID, today, date(2026, 11, 24))["blocked"] == message

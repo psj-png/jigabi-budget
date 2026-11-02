@@ -104,3 +104,25 @@ def insert_period(conn, user_id, start, end, opening_balance):
             (user_id, start, end, opening_balance),
         )
     conn.commit()
+
+
+def save_balance_log(conn, user_id, log_date, balance, income_in, spent):
+    # 같은 날을 다시 적으면 덮어쓴다 (uq_user_date)
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO balance_logs (user_id, log_date, balance, income_in, spent) "
+            "VALUES (%s, %s, %s, %s, %s) AS new "
+            "ON DUPLICATE KEY UPDATE balance = new.balance, income_in = new.income_in, "
+            "spent = new.spent",
+            (user_id, log_date, balance, income_in, spent),
+        )
+    conn.commit()
+
+
+def update_opening_balance(conn, user_id, start_date, opening_balance):
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE periods SET opening_balance = %s WHERE user_id = %s AND start_date = %s",
+            (opening_balance, user_id, start_date),
+        )
+    conn.commit()
