@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>지갑이</title>
+</head>
+<body>
+<h1>지갑이</h1>
+<p>DB 연결을 확인하는 첫 화면이에요.</p>
+<h2>사고 싶은 것</h2>
+<ul>
+{% for item in items %}
+  <li>{{ item.name }} {{ "{:,}".format(item.price) }}원{% if item.need_by %} (필요한 날 {{ item.need_by }}){% endif %}</li>
+{% endfor %}
+</ul>
+</body>
+</html>
