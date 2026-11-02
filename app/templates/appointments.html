@@ -42,7 +42,7 @@
   <p><label>제목 <input type="text" name="title" maxlength="40" required></label></p>
   <p><label>금액 <input type="number" name="amount" min="0" required>원</label></p>
   <p><label><input type="checkbox" name="transport" {% if fare > 0 %}checked{% endif %}> 교통비</label>
-     <input type="number" name="transport_fare" min="0" value="{{ fare }}">원</p>
+     <input type="number" name="transport_fare" min="0" value="{{ max_fare }}">원</p>
   <p><button type="submit">저장</button></p>
 </form>
 {% endif %}

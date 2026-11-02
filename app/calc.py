@@ -60,11 +60,16 @@ def min_living_on(day, routines):
     return total
 
 
+def max_fare(routines):
+    # 루틴 왕복 교통비 중 가장 큰 값. 루틴이 없으면 0
+    return max((r["round_trip_fare"] for r in routines), default=0)
+
+
 def transport_default(day, routines):
-    # R9 약속 교통비 기본값: 그날 가는 곳이 있으면 0(끔), 없으면 루틴 왕복 교통비 중 가장 큰 값
+    # R9 약속 교통비 기본값: 그날 가는 곳이 있으면 0(끔), 없으면 max_fare
     if any(goes_on(day, r) for r in routines):
         return 0
-    return max((r["round_trip_fare"] for r in routines), default=0)
+    return max_fare(routines)
 
 
 def min_living(start, end, routines):

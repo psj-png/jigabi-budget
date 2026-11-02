@@ -147,3 +147,11 @@ def delete_appointment(conn, user_id, appt_id):
             (appt_id, user_id),
         )
     conn.commit()
+
+
+def get_user_id(conn, public_id):
+    # 쿠키의 public_id로 user_id를 찾는다. 모르는 ID면 None
+    with conn.cursor() as cur:
+        cur.execute("SELECT user_id FROM users WHERE public_id = %s", (public_id,))
+        row = cur.fetchone()
+    return row["user_id"] if row else None

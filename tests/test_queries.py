@@ -227,3 +227,8 @@ def test_약속_추가하고_지우기(conn, clean_appts):
     queries.delete_appointment(conn, USER_ID, appt["appt_id"])
     h = make_home(conn, USER_ID, today)
     assert (h["free"], h["daily"], h["budget"]) == (224100, 8900, 12000)
+
+
+def test_get_user_id(conn):
+    assert queries.get_user_id(conn, "3f6b2a1c-7d4e-4b8a-9c2d-1e5f6a7b8c9d") == USER_ID
+    assert queries.get_user_id(conn, "없는-아이디") is None

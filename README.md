@@ -27,6 +27,7 @@ docker compose up --build
 ```
 
 브라우저에서 http://localhost:8000 을 연다.
+http://localhost:8000/demo 를 열면 예시 사람(seed)으로 둘러볼 수 있다.
 
 DB는 처음 실행할 때 `db/schema.sql`, `db/seed.sql`이 자동으로 들어간다. 테이블을 처음부터 다시 만들려면 `docker compose down -v` 후 다시 실행한다.
 

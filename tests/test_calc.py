@@ -2,7 +2,7 @@ from datetime import date
 
 from app.calc import (appointments_sum, daily_margin, estimate_balance, first_day, free_money,
                       min_living, monthly_sum, incomes_sum, period, spent_money, stage,
-                      today_budget, transport_default)
+                      today_budget, transport_default, max_fare)
 
 
 def test_R1_예시_10월30일():
@@ -215,3 +215,8 @@ def test_약속_추가하면_하루_여유가_줄어든다():
     appts = APPTS + [{"appt_date": date(2026, 11, 13), "amount": 50000, "transport_fare": 3100}]
     assert 계산(TODAY, False, 290000, TODAY)[4] == 8800
     assert 계산(TODAY, False, 290000, TODAY, appts)[4] == 6800
+
+
+def test_max_fare():
+    assert max_fare(ROUTINES) == 3100
+    assert max_fare([]) == 0
