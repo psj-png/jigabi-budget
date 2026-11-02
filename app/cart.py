@@ -21,6 +21,7 @@ def make_cart(conn, user_id, today, selected):
 
     user = queries.get_user(conn, user_id)
     wishes = queries.get_wish_items(conn, user_id)
+    all_items = queries.get_items(conn, user_id)
     ended = h["daily"] is None  # 남은 날 0: 기간 마지막 날 밤
 
     items = []
@@ -32,7 +33,11 @@ def make_cart(conn, user_id, today, selected):
         items.append({"id": w["item_id"], "name": w["name"], "price": w["price"],
                       "need_by": w["need_by"], "chip": chip, "checked": w["item_id"] in selected})
 
-    cart = {"ready": True, "ended": ended, "items": items, "now": h["stage"], "now_daily": h["daily"], "after": None,
+    # 계획한 것(예: 11/25에 사기로 함)과 최근 산 것(반품할 수 있는 것)
+    planned = [i for i in all_items if i["status"] == "planned"]
+    recent = [i for i in all_items if i["status"] == "bought" and calc.can_return(i["bought_date"], today)]
+
+    cart = {"ready": True, "planned": planned, "recent": recent, "logged": h["logged"], "ended": ended, "items": items, "now": h["stage"], "now_daily": h["daily"], "after": None,
             "hours": None, "shortage": None, "message": None, "hours_text": None}
     if ended:
         cart["message"] = "이번 기간이 끝났어요. 새 기간에 다시 봐요"

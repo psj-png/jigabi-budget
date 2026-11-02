@@ -3,7 +3,7 @@ from datetime import date
 from app.calc import (appointments_sum, daily_margin, estimate_balance, first_day, free_money,
                       min_living, monthly_sum, incomes_sum, period, spent_money, stage,
                       today_budget, transport_default, max_fare, preview, work_hours,
-                      split_plan)
+                      split_plan, purchases_sum, planned_sum, can_return)
 
 
 def test_R1_예시_10월30일():
@@ -291,3 +291,45 @@ def test_R13_필요한_날이_빠르면_이번에_산다():
 def test_R13_해답이_없으면_None():
     이번 = (D(2026, 10, 30), 229900, 26)
     assert split_plan([("비싼 것", 2000000, None)], [이번, 다음, 그다음], 10000) is None
+
+
+# ---- 산 것·반품·계획 ----
+def 물건(price, status="wish", planned=None, bought=None, returned=None):
+    return {"price": price, "status": status, "planned_date": planned,
+            "bought_date": bought, "returned_date": returned}
+
+
+def test_purchases_sum():
+    items = [
+        물건(49000, "bought", bought=date(2026, 10, 31)),
+        물건(29000, "bought", bought=date(2026, 11, 5)),
+        물건(10000, "returned", bought=date(2026, 10, 31), returned=date(2026, 11, 1)),
+        물건(7000, "wish"),
+    ]
+    # 10/31 하루: 산 49,000 + 산 10,000
+    assert purchases_sum(date(2026, 10, 31), date(2026, 10, 31), items) == 59000
+    # 11/1 하루: 반품 10,000만 (산 날은 범위 밖) -> -10,000
+    assert purchases_sum(date(2026, 11, 1), date(2026, 11, 1), items) == -10000
+    # 기간 전체: 49,000 + 29,000 + 10,000 - 10,000
+    assert purchases_sum(date(2026, 10, 30), date(2026, 11, 24), items) == 78000
+    # 범위가 거꾸로면 0
+    assert purchases_sum(date(2026, 11, 2), date(2026, 10, 30), items) == 0
+
+
+def test_planned_sum():
+    items = [
+        물건(189000, "planned", planned=date(2026, 11, 25)),
+        물건(49000, "planned", planned=date(2026, 11, 10)),
+        물건(29000, "wish", planned=date(2026, 11, 10)),   # planned가 아니면 안 센다
+        물건(5000, "bought", planned=date(2026, 11, 10), bought=date(2026, 11, 10)),
+    ]
+    assert planned_sum(date(2026, 10, 31), date(2026, 11, 24), items) == 49000
+    assert planned_sum(date(2026, 11, 25), date(2026, 12, 24), items) == 189000
+    assert planned_sum(date(2026, 12, 25), date(2027, 1, 24), items) == 0
+
+
+def test_반품은_산_날_빼고_7일_안():
+    산날 = date(2026, 10, 31)
+    assert can_return(산날, date(2026, 10, 31))
+    assert can_return(산날, date(2026, 11, 7))        # 7일째까지
+    assert not can_return(산날, date(2026, 11, 8))    # 8일째

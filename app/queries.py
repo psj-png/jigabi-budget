@@ -225,3 +225,65 @@ def insert_wish_item(conn, user_id, name, price, need_by):
             (user_id, name, price, need_by),
         )
     conn.commit()
+
+
+def get_items(conn, user_id):
+    # 상태와 날짜까지 모두 (산 것, 계획한 것, 반품한 것 포함)
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT item_id, name, price, need_by, status, planned_date, bought_date, "
+            "received_date, returned_date FROM wish_items WHERE user_id = %s ORDER BY item_id",
+            (user_id,),
+        )
+        return cur.fetchall()
+
+
+# 아래 네 함수는 commit을 하지 않는다. 부르는 쪽(purchase.py)이 한 트랜잭션으로 묶어 commit한다
+def buy_items(conn, user_id, item_ids, day):
+    # 아직 안 산 것(wish·planned)만 산 것으로 기록 (받은 날 = 산 날). 산 물건 목록을 돌려준다
+    if not item_ids:
+        return []
+    marks = ", ".join(["%s"] * len(item_ids))
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT item_id, price FROM wish_items WHERE user_id = %s "
+            f"AND status IN ('wish', 'planned') AND item_id IN ({marks})",
+            (user_id, *item_ids),
+        )
+        rows = cur.fetchall()
+        for r in rows:
+            cur.execute(
+                "UPDATE wish_items SET status = 'bought', bought_date = %s, received_date = %s "
+                "WHERE item_id = %s AND user_id = %s",
+                (day, day, r["item_id"], user_id),
+            )
+    return rows
+
+
+def plan_item(conn, user_id, item_id, planned_date):
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE wish_items SET status = 'planned', planned_date = %s "
+            "WHERE item_id = %s AND user_id = %s AND status IN ('wish', 'planned')",
+            (planned_date, item_id, user_id),
+        )
+        return cur.rowcount
+
+
+def return_item(conn, user_id, item_id, day):
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE wish_items SET status = 'returned', returned_date = %s "
+            "WHERE item_id = %s AND user_id = %s AND status = 'bought'",
+            (day, item_id, user_id),
+        )
+        return cur.rowcount
+
+
+def adjust_balance_log(conn, user_id, log_date, delta):
+    # 그날 밤 잔액을 delta만큼 고친다 (산 것은 음수, 반품은 양수)
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE balance_logs SET balance = balance + %s WHERE user_id = %s AND log_date = %s",
+            (delta, user_id, log_date),
+        )

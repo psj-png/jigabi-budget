@@ -401,9 +401,9 @@ def test_나눠_사기_seed(conn):
     assert (plan[2]["free"], plan[2]["days"]) == (595100, 31)
 
     # calc 테스트 b)와 같은 결과
-    assert [n for n, _, _ in plan[0]["items"]] == ["니트", "목도리", "부츠"]
+    assert [it[0] for it in plan[0]["items"]] == ["니트", "목도리", "부츠"]
     assert (plan[0]["daily"], plan[0]["stage"]) == (1000, "홀쭉")
-    assert [n for n, _, _ in plan[1]["items"]] == ["롱패딩"]
+    assert [it[0] for it in plan[1]["items"]] == ["롱패딩"]
     assert (plan[1]["daily"], plan[1]["stage"]) == (6600, "든든")
     assert s["note"] == "필요한 날(12/1)도 맞추고, 최소 생활비도 안 건드려요."
     assert s["income_note"] == "다음 기간은 예상 수입 67만 원(알바비 42만 + 용돈 25만) 기준이에요."
@@ -421,3 +421,120 @@ def test_나눠_사기_9개부터는_막는다(conn, clean_extra_wishes):
     # 8개는 계산한다
     s = split.make_split(conn, USER_ID, date(2026, 10, 31), ids[:8])
     assert s["plan"] is not None
+
+
+# ---- 산 것·반품·나눠 사기 저장 (끝나면 seed 상태로 되돌린다) ----
+from app import purchase
+
+
+@pytest.fixture
+def clean_purchases(conn):
+    yield
+    with conn.cursor() as cur:
+        cur.execute("UPDATE wish_items SET status = 'wish', planned_date = NULL, bought_date = NULL, "
+                    "received_date = NULL, returned_date = NULL WHERE user_id = %s", (USER_ID,))
+        cur.execute("DELETE FROM balance_logs WHERE user_id = %s AND log_date <> %s",
+                    (USER_ID, date(2026, 10, 30)))
+        cur.execute("UPDATE balance_logs SET balance = 284200 WHERE user_id = %s AND log_date = %s",
+                    (USER_ID, date(2026, 10, 30)))
+        cur.execute("DELETE FROM periods WHERE user_id = %s AND start_date <> %s",
+                    (USER_ID, date(2026, 10, 30)))
+    conn.commit()
+
+
+def item_ids(conn):
+    return {w["name"]: w["item_id"] for w in queries.get_wish_items(conn, USER_ID)}
+
+
+def test_산_것과_반품(conn, clean_purchases):
+    from app.home import make_home
+
+    ids = item_ids(conn)
+
+    # a) 10/31에 니트 49,000을 사면 여유 돈 224,100 -> 175,100, 하루 여유 7,000
+    assert purchase.buy_now(conn, USER_ID, [ids["니트"]], date(2026, 10, 31)) == 1
+    h = make_home(conn, USER_ID, date(2026, 10, 31))
+    assert (h["free"], h["daily"]) == (175100, 7000)
+    assert h["items_out"] == 49000
+
+    # b) 이어서 10/31 밤 잔액 232,100: 지난 잔액 284,200 - 산 것 49,000 - 232,100 = 쓴 돈 3,100
+    assert balance_page.save(conn, USER_ID, date(2026, 10, 31), date(2026, 10, 31), 232100, 0) is None
+    assert queries.get_balance_log(conn, USER_ID, date(2026, 10, 31))["spent"] == 3100
+
+    # c) 11/1에 니트를 반품하면 환불 49,000이 11/1에 들어온 것: 여유 돈 224,100, 하루 여유 9,300
+    assert purchase.return_item(conn, USER_ID, ids["니트"], date(2026, 11, 1)) is True
+    h = make_home(conn, USER_ID, date(2026, 11, 1))
+    assert (h["free"], h["daily"]) == (224100, 9300)
+    # 이미 반품한 것은 다시 반품할 수 없다
+    assert purchase.return_item(conn, USER_ID, ids["니트"], date(2026, 11, 1)) is False
+
+
+def test_밤_잔액을_적은_날_사면_적은_잔액에서_뺀다(conn, clean_purchases):
+    from app.home import make_home
+
+    ids = item_ids(conn)
+    # d) 10/30 밤 기록(284,200)이 있는 날 목도리 29,000을 사면 그 잔액이 255,200
+    purchase.buy_now(conn, USER_ID, [ids["목도리"]], date(2026, 10, 30))
+    assert queries.get_balance_log(conn, USER_ID, date(2026, 10, 30))["balance"] == 255200
+    h = make_home(conn, USER_ID, date(2026, 10, 30))
+    assert (h["free"], h["daily"]) == (195100, 7800)
+
+    # 그날 반품하면 다시 더해진다
+    assert purchase.return_item(conn, USER_ID, ids["목도리"], date(2026, 10, 30)) is True
+    assert queries.get_balance_log(conn, USER_ID, date(2026, 10, 30))["balance"] == 284200
+
+
+def test_나눠_사기_저장(conn, clean_purchases):
+    from app.home import make_home
+
+    ids = item_ids(conn)
+    today = date(2026, 10, 31)
+    assert purchase.save_split(conn, USER_ID, today, list(ids.values())) is True
+
+    # e) 니트·목도리·부츠는 산 것, 롱패딩은 11/25에 사기로 함
+    status = {i["name"]: (i["status"], i["planned_date"], i["bought_date"])
+              for i in queries.get_items(conn, USER_ID)}
+    assert status["니트"] == ("bought", None, today)
+    assert status["목도리"] == ("bought", None, today)
+    assert status["부츠"] == ("bought", None, today)
+    assert status["롱패딩"] == ("planned", date(2026, 11, 25), None)
+    h = make_home(conn, USER_ID, today)
+    assert (h["free"], h["daily"]) == (27100, 1000)
+
+    # f) 11/25: 새 기간 시작 잔액 27,100, 롱패딩 189,000은 그날 계획이라 여유 돈에서 빠진다
+    h = make_home(conn, USER_ID, date(2026, 11, 25))
+    assert queries.get_period(conn, USER_ID, date(2026, 11, 25))["opening_balance"] == 27100
+    assert (h["free"], h["daily"], h["stage"]) == (228000, 7600, "든든")
+
+    # 계획한 물건은 장바구니(wish) 목록에서 빠진다
+    assert "롱패딩" not in item_ids(conn)
+
+
+def test_반품은_산_날_빼고_7일_안(conn, clean_purchases):
+    ids = item_ids(conn)
+    purchase.buy_now(conn, USER_ID, [ids["니트"]], date(2026, 10, 31))
+    assert purchase.return_item(conn, USER_ID, ids["니트"], date(2026, 11, 8)) is False   # 8일째
+    assert queries.get_items(conn, USER_ID)[1]["status"] == "bought"
+    assert purchase.return_item(conn, USER_ID, ids["니트"], date(2026, 11, 7)) is True     # 7일째
+
+
+def test_남의_물건은_사거나_반품할_수_없다(conn, clean_purchases):
+    ids = item_ids(conn)
+    other, _, _ = setup.create_account(conn, SEED_LIKE, date(2026, 10, 30))
+    try:
+        # 다른 사용자가 seed 사용자의 item_id로 사려고 해도 아무것도 안 바뀐다
+        assert purchase.buy_now(conn, other, list(ids.values()), date(2026, 10, 31)) == 0
+        assert all(i["status"] == "wish" for i in queries.get_items(conn, USER_ID))
+
+        # seed 사용자가 산 것을 다른 사용자가 반품하려 해도 안 된다
+        purchase.buy_now(conn, USER_ID, [ids["니트"]], date(2026, 10, 31))
+        assert purchase.return_item(conn, other, ids["니트"], date(2026, 11, 1)) is False
+        assert queries.get_items(conn, USER_ID)[1]["status"] == "bought"
+        # 계획 잡기도 마찬가지
+        with conn.cursor() as cur:
+            assert queries.plan_item(conn, other, ids["부츠"], date(2026, 11, 25)) == 0
+        conn.rollback()
+    finally:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM users WHERE user_id = %s", (other,))
+        conn.commit()

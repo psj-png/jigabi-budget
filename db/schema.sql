@@ -85,6 +85,7 @@ CREATE TABLE wish_items (
     planned_date DATE NULL,
     bought_date DATE NULL,
     received_date DATE NULL,
+    returned_date DATE NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 

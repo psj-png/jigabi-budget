@@ -40,7 +40,41 @@
 </form>
 <p>칩은 그것 하나만 샀을 때 지갑이 단계예요.</p>
 
-<p><a href="/split?{% for it in c["items"] if it.checked %}item={{ it.id }}&{% endfor %}{% if today_q %}today={{ today_q }}{% endif %}">[나눠 사기 추천 보기]</a> · [그래도 지금 살게요] (준비 중)</p>
+<p><a href="/split?{% for it in c["items"] if it.checked %}item={{ it.id }}&{% endfor %}{% if today_q %}today={{ today_q }}{% endif %}">[나눠 사기 추천 보기]</a></p>
+
+{% if c.after %}
+<form method="post" action="/cart/buy">
+  {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+  {% for it in c["items"] if it.checked %}<input type="hidden" name="item" value="{{ it.id }}">{% endfor %}
+  <button type="submit">{% if c.after.short > 0 %}그래도 지금 살게요{% else %}지금 살게요{% endif %}</button>
+</form>
+{% if c.logged %}<p>오늘 밤 잔액을 적은 뒤에 산 것은 적은 잔액에서 뺐어요</p>{% endif %}
+{% endif %}
+
+{% if c.planned %}
+<h2>살 계획</h2>
+<ul>
+  {% for it in c.planned %}
+  <li>{{ it.name }} · {{ "{:,}".format(it.price) }}원 · {{ it.planned_date.month }}/{{ it.planned_date.day }}에 사기로 함</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<h2>최근 산 것 (산 날 빼고 7일 안 반품 가능)</h2>
+{% if c.recent %}
+<ul>
+  {% for it in c.recent %}
+  <li>{{ it.name }} · {{ "{:,}".format(it.price) }}원 · {{ it.bought_date.month }}/{{ it.bought_date.day }}에 산 것
+    <form method="post" action="/cart/{{ it.item_id }}/return" style="display:inline">
+      {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+      <button type="submit">반품</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>없어요</p>
+{% endif %}
 
 <h2>사고 싶은 것 추가</h2>
 <form method="post" action="/cart/items">

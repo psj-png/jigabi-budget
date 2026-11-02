@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app import balance as balance_page
-from app import calc, cart, queries, setup, split
+from app import calc, cart, purchase, queries, setup, split
 from app.db import get_conn
 from app.home import make_home
 
@@ -337,3 +337,52 @@ def split_get(request: Request, today: str = None, item: list[int] = Query(defau
     return templates.TemplateResponse(request, "split.html", {
         "s": data, "items": item, "today_q": today,
     })
+
+
+@app.post("/cart/buy")
+def cart_buy(request: Request, item: list[int] = Form(default=[]), today: str = Form(None)):
+    user_id = current_user(request)
+    if user_id is None:
+        return to_start()
+    now = parse_date(today, date.today())
+
+    conn = get_conn()
+    try:
+        purchase.buy_now(conn, user_id, item, now)
+    finally:
+        conn.close()
+    return RedirectResponse("/" + (f"?today={today}" if today else ""), status_code=303)
+
+
+@app.post("/cart/{item_id}/return")
+def cart_return(request: Request, item_id: int, today: str = Form(None)):
+    user_id = current_user(request)
+    if user_id is None:
+        return to_start()
+    now = parse_date(today, date.today())
+
+    conn = get_conn()
+    try:
+        done = purchase.return_item(conn, user_id, item_id, now)
+    finally:
+        conn.close()
+    if not done:
+        raise HTTPException(status_code=400, detail="반품할 수 없어요 (산 날 빼고 7일 안, 산 것만)")
+    return RedirectResponse("/cart" + (f"?today={today}" if today else ""), status_code=303)
+
+
+@app.post("/split/save")
+def split_save(request: Request, item: list[int] = Form(default=[]), today: str = Form(None)):
+    user_id = current_user(request)
+    if user_id is None:
+        return to_start()
+    now = parse_date(today, date.today())
+
+    conn = get_conn()
+    try:
+        done = purchase.save_split(conn, user_id, now, item)
+    finally:
+        conn.close()
+    if not done:
+        raise HTTPException(status_code=400, detail="저장할 계획이 없어요")
+    return RedirectResponse("/" + (f"?today={today}" if today else ""), status_code=303)

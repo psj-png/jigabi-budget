@@ -23,10 +23,11 @@ def ensure_period(conn, user_id, day):
     routines = queries.get_routines(conn, user_id)
     fixed = queries.get_fixed_costs(conn, user_id)
     appts = queries.get_appointments(conn, user_id)
+    items = queries.get_items(conn, user_id)
     # 마지막 밤 잔액에서 시작일 전날까지 안 적은 날을 메운 값이 시작 잔액
     opening = calc.estimate_balance(
         before["balance"], before["log_date"] + timedelta(days=1),
-        new_start - timedelta(days=1), routines, fixed, appts, incomes)
+        new_start - timedelta(days=1), routines, fixed, appts, incomes, items)
     queries.insert_period(conn, user_id, new_start, new_end, opening)
     return queries.get_period(conn, user_id, day)
 
@@ -76,13 +77,16 @@ def make_home(conn, user_id, today):
     routines = queries.get_routines(conn, user_id)
     fixed = queries.get_fixed_costs(conn, user_id)
     appts = queries.get_appointments(conn, user_id)
+    items = queries.get_items(conn, user_id)
 
     min_living = calc.min_living(first, end, routines)
     incomes_sum = calc.incomes_sum(first, end, incomes)
     fixed_sum = calc.monthly_sum(first, end, fixed)
     appt_sum = calc.appointments_sum(first, end, appts)
     repay = per["repay_amount"]
-    free = calc.free_money(balance, incomes_sum, fixed_sum, appt_sum, min_living, repay)
+    # 산 물건(반품 뺀 것)과 살 계획을 잡은 물건은 약속처럼 여유 돈에서 뺀다
+    items_out = calc.purchases_sum(first, today, items) + calc.planned_sum(first, end, items)
+    free = calc.free_money(balance, incomes_sum, fixed_sum, appt_sum, min_living, repay, items_out)
     daily = calc.daily_margin(free, days_left)
 
     home = {
@@ -97,6 +101,7 @@ def make_home(conn, user_id, today):
         "appt": appt_sum,
         "min_living": min_living,
         "repay": repay,
+        "items_out": items_out,
         "daily": daily,
         "stage": None,
         "budget": None,

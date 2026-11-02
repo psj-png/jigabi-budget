@@ -44,6 +44,7 @@ def make_split(conn, user_id, today, selected):
     routines = queries.get_routines(conn, user_id)
     fixed = queries.get_fixed_costs(conn, user_id)
     appts = queries.get_appointments(conn, user_id)
+    all_items = queries.get_items(conn, user_id)
 
     # 이번 기간은 지금 여유 돈, 다음·그다음은 이번에서 남는 돈을 0으로 보고 계산
     periods = [(today, h["free"], h["days_left"])]
@@ -57,12 +58,15 @@ def make_split(conn, user_id, today, selected):
             calc.monthly_sum(p_start, p_end, fixed),
             calc.appointments_sum(p_start, p_end, appts),
             calc.min_living(p_start, p_end, routines),
+            0,
+            calc.planned_sum(p_start, p_end, all_items),  # 이미 살 계획을 잡은 물건
         )
         periods.append((p_start, free, days))
         spans.append((p_start, p_end))
         start = p_end + timedelta(days=1)
 
-    items = [(w["name"], w["price"], w["need_by"]) for w in chosen]
+    # (이름, 가격, 필요한 날, item_id): calc.split_plan은 앞의 세 개만 쓴다
+    items = [(w["name"], w["price"], w["need_by"], w["item_id"]) for w in chosen]
     plan = calc.split_plan(items, periods, user["comfort_daily"])
     if plan is None:
         result["message"] = "세 기간에 나눠도 나방이 나와요. 담은 걸 줄여 보세요"
@@ -73,6 +77,7 @@ def make_split(conn, user_id, today, selected):
     for i, p in enumerate(plan):
         p["label"] = labels[i]
         p["name"] = PERIOD_NAMES[i]
+        p["start"] = periods[i][0]
         p["free"] = periods[i][1]
         p["days"] = periods[i][2]
 

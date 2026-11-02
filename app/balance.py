@@ -28,11 +28,13 @@ def _context(conn, user_id, day):
 
     incomes = queries.get_incomes(conn, user_id)
     fixed = queries.get_fixed_costs(conn, user_id)
+    items = queries.get_items(conn, user_id)
     return {
         "prev_balance": prev_balance,
         "start": start,
         "income_plan": calc.incomes_sum(start, day, incomes),
         "fixed_out": calc.monthly_sum(start, day, fixed),
+        "bought": calc.purchases_sum(start, day, items),  # 그 사이 산 값 - 반품한 값
     }
 
 
@@ -62,8 +64,7 @@ def save(conn, user_id, today, day, balance, income_in):
     if message:
         return message
 
-    # 기록한 구매는 구매 테이블이 생기기 전까지 0
-    spent = calc.spent_money(ctx["prev_balance"], income_in, ctx["fixed_out"], 0, balance)
+    spent = calc.spent_money(ctx["prev_balance"], income_in, ctx["fixed_out"], ctx["bought"], balance)
     queries.save_balance_log(conn, user_id, day, balance, income_in, spent)
 
     # 다음 날 시작하는 기간이 이미 있으면 그 시작 잔액을 적은 잔액으로 고친다

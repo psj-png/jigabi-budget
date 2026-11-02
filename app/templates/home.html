@@ -34,6 +34,7 @@
   <li>− 약속 {{ "{:,}".format(h.appt) }}원</li>
   <li>− 최소 생활비 {{ "{:,}".format(h.min_living) }}원</li>
   <li>− 비상금 상환 {{ "{:,}".format(h.repay) }}원</li>
+  {% if h.items_out != 0 %}<li>− 산 것·살 계획 {{ "{:,}".format(h.items_out) }}원</li>{% endif %}
   <li>= 여유 돈 {{ "{:,}".format(h.free) }}원</li>
 </ul>
 {% endif %}

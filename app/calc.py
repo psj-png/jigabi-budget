@@ -109,10 +109,11 @@ def appointments_sum(start, end, appointments):
                for a in appointments if start <= a["appt_date"] <= end)
 
 
-def free_money(balance, incomes_sum, fixed_sum, appt_sum, min_living_sum, repay=0):
+def free_money(balance, incomes_sum, fixed_sum, appt_sum, min_living_sum, repay=0, items_out=0):
     # R2 쓸 수 있는 돈 = 잔액 + 남은 날 안에 들어올 수입, R5 여유 돈
+    # items_out: 산 물건 값(반품 뺀 것)과 살 계획을 잡은 물건 값
     available = balance + incomes_sum
-    return available - fixed_sum - appt_sum - min_living_sum - repay
+    return available - fixed_sum - appt_sum - min_living_sum - repay - items_out
 
 
 def daily_margin(free, days_left):
@@ -144,8 +145,8 @@ def today_budget(day, routines, appointments, daily):
     return min_living_on(day, routines) + daily + appointments_sum(day, day, appointments)
 
 
-def estimate_balance(balance, start, end, routines, fixed, appts, incomes):
-    # start~end 동안 수입은 더하고 고정지출·약속·최소 생활비는 뺀 잔액
+def estimate_balance(balance, start, end, routines, fixed, appts, incomes, items=()):
+    # start~end 동안 수입은 더하고 고정지출·약속·최소 생활비·산 물건 값은 뺀 잔액
     # (안 적은 날은 최소 생활비와 약속만큼 썼다고 본다, R10). start > end면 그대로
     if start > end:
         return balance
@@ -153,7 +154,8 @@ def estimate_balance(balance, start, end, routines, fixed, appts, incomes):
             + incomes_sum(start, end, incomes)
             - monthly_sum(start, end, fixed)
             - appointments_sum(start, end, appts)
-            - min_living(start, end, routines))
+            - min_living(start, end, routines)
+            - purchases_sum(start, end, items))
 
 
 def spent_money(prev_balance, income_in, fixed_out, bought, balance):
@@ -214,3 +216,26 @@ def split_plan(items, periods, comfort):
             best = [{"items": [it for it, p in zip(items, combo) if p == k],
                      "daily": dailies[k], "stage": stages[k]} for k in range(3)]
     return best
+
+
+def purchases_sum(start, end, items):
+    # start~end에 산 물건 값 합 - start~end에 반품한 물건 값 합 (status와 상관없이 날짜로)
+    total = 0
+    for it in items:
+        if it["bought_date"] is not None and start <= it["bought_date"] <= end:
+            total += it["price"]
+        if it["returned_date"] is not None and start <= it["returned_date"] <= end:
+            total -= it["price"]
+    return total
+
+
+def planned_sum(start, end, items):
+    # 살 계획(planned)을 잡은 날이 start~end인 물건 값 합. 약속처럼 여유 돈에서 뺀다
+    return sum(it["price"] for it in items
+               if it["status"] == "planned" and it["planned_date"] is not None
+               and start <= it["planned_date"] <= end)
+
+
+def can_return(bought_date, day):
+    # R14-0 반품은 산 날 빼고 7일 안
+    return 0 <= (day - bought_date).days <= 7
