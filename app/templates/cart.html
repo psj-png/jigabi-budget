@@ -12,6 +12,9 @@
 <p>먼저 설정이 필요해요.</p>
 {% else %}
 <p><strong>{{ c.message }}</strong></p>
+{% if not c.ended %}
+<p>하루 여유 {{ "{:,}".format(c.now_daily) }}원{% if c.after %} → {{ "{:,}".format(c.after.daily)|replace("-", "−") }}원{% endif %}</p>
+{% endif %}
 {% if c.shortage %}<p>{{ c.shortage }}</p>{% endif %}
 {% if c.hours_text %}<p>{{ c.hours_text }}</p>{% endif %}
 

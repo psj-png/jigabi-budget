@@ -338,7 +338,7 @@ def test_장바구니_미리보기(conn):
 
     # 아무것도 안 고르면
     c = cart.make_cart(conn, USER_ID, today, [])
-    assert c["now"] == "든든" and c["after"] is None
+    assert c["now"] == "든든" and c["now_daily"] == 8900 and c["after"] is None
     assert c["message"] == "담은 걸 체크하면 사면 어떻게 되는지 보여줘요"
     assert [i["chip"] for i in c["items"]] == ["홀쭉", "든든", "든든", "홀쭉"]
 

@@ -32,7 +32,7 @@ def make_cart(conn, user_id, today, selected):
         items.append({"id": w["item_id"], "name": w["name"], "price": w["price"],
                       "need_by": w["need_by"], "chip": chip, "checked": w["item_id"] in selected})
 
-    cart = {"ready": True, "ended": ended, "items": items, "now": h["stage"], "after": None,
+    cart = {"ready": True, "ended": ended, "items": items, "now": h["stage"], "now_daily": h["daily"], "after": None,
             "hours": None, "shortage": None, "message": None, "hours_text": None}
     if ended:
         cart["message"] = "이번 기간이 끝났어요. 새 기간에 다시 봐요"
