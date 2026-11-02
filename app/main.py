@@ -1,11 +1,11 @@
 from datetime import date, timedelta
 
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app import balance as balance_page
-from app import calc, queries, setup
+from app import calc, cart, queries, setup
 from app.db import get_conn
 from app.home import make_home
 
@@ -285,16 +285,38 @@ def appointments_delete(request: Request, appt_id: int, today: str = Form(None))
     return RedirectResponse("/appointments" + (f"?today={today}" if today else ""), status_code=303)
 
 
-@app.get("/wishes")
-def wishes(request: Request):
+@app.get("/cart")
+def cart_get(request: Request, today: str = None, item: list[int] = Query(default=[])):
     user_id = current_user(request)
     if user_id is None:
         return to_start()
+    now = parse_date(today, date.today())
+
     conn = get_conn()
     try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT name, price, need_by FROM wish_items WHERE user_id = %s", (user_id,))
-            items = cur.fetchall()
+        data = cart.make_cart(conn, user_id, now, item)
     finally:
         conn.close()
-    return templates.TemplateResponse(request, "index.html", {"items": items})
+    return templates.TemplateResponse(request, "cart.html", {
+        "c": data, "stages": cart.STAGES, "today_q": today,
+    })
+
+
+@app.post("/cart/items")
+def cart_items_post(request: Request, name: str = Form(min_length=1, max_length=60),
+                    price: int = Form(ge=1), need_by: str = Form(None), today: str = Form(None)):
+    user_id = current_user(request)
+    if user_id is None:
+        return to_start()
+    now = parse_date(today, date.today())
+    # 필요한 날은 오늘 이후거나 빈칸
+    need = parse_date(need_by, None)
+    if need is not None and need < now:
+        raise HTTPException(status_code=400, detail="필요한 날은 오늘 이후여야 해요")
+
+    conn = get_conn()
+    try:
+        queries.insert_wish_item(conn, user_id, name, price, need)
+    finally:
+        conn.close()
+    return RedirectResponse("/cart" + (f"?today={today}" if today else ""), status_code=303)

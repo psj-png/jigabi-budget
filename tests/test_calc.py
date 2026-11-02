@@ -2,7 +2,7 @@ from datetime import date
 
 from app.calc import (appointments_sum, daily_margin, estimate_balance, first_day, free_money,
                       min_living, monthly_sum, incomes_sum, period, spent_money, stage,
-                      today_budget, transport_default, max_fare)
+                      today_budget, transport_default, max_fare, preview, work_hours)
 
 
 def test_R1_예시_10월30일():
@@ -220,3 +220,31 @@ def test_약속_추가하면_하루_여유가_줄어든다():
 def test_max_fare():
     assert max_fare(ROUTINES) == 3100
     assert max_fare([]) == 0
+
+
+def test_R11_미리보기_하나씩():
+    # 기록 전 10/30: 여유 돈 229,900, 남은 날 26
+    def 하나(price):
+        return preview(229900, 26, price, 10000)
+
+    assert 하나(189000) == (1500, "홀쭉", 0)   # 롱패딩
+    assert 하나(49000) == (6900, "든든", 0)    # 니트
+    assert 하나(29000) == (7700, "든든", 0)    # 목도리
+    assert 하나(119000) == (4200, "홀쭉", 0)   # 부츠
+
+
+def test_R11_미리보기_4개_다():
+    # 386,000: 229,900 - 386,000 = -156,100 -> 하루 -6,100 나방, 최소 생활비 156,100원 침범
+    assert preview(229900, 26, 386000, 10000) == (-6100, "나방", 156100)
+    assert work_hours(386000, 10320) == 37
+
+
+def test_R11_남은_날_0이면_None():
+    assert preview(100000, 0, 5000, 10000) is None
+
+
+def test_알바_시간_0점5_올림():
+    assert work_hours(25800, 10320) == 3     # 2.5 -> 3 (round()면 2)
+    assert work_hours(189000, 10320) == 18
+    assert work_hours(10320, 10320) == 1
+    assert work_hours(5000, 0) is None

@@ -158,3 +158,21 @@ def estimate_balance(balance, start, end, routines, fixed, appts, incomes):
 def spent_money(prev_balance, income_in, fixed_out, bought, balance):
     # R10 쓴 돈 = 지난 잔액 + 들어온 돈 - 빠져나간 고정지출 - 기록한 구매 - 지금 잔액
     return prev_balance + income_in - fixed_out - bought - balance
+
+
+def preview(free, days_left, price_sum, comfort):
+    # R11 미리보기: 여유 돈에서 물건 값 합을 빼고 R6, R8을 다시 계산한다
+    # (하루 여유, 단계, 모자라는 돈)을 돌려준다. 남은 날이 0이면 None
+    if days_left <= 0:
+        return None
+    after = free - price_sum
+    daily = daily_margin(after, days_left)
+    short = -after if after < 0 else 0
+    return daily, stage(daily, comfort), short
+
+
+def work_hours(price_sum, wage):
+    # 알바 시간 = 물건 값 ÷ 시급, 0.5 올림 (파이썬 round()는 2.5를 2로 만들어서 정수로 계산)
+    if wage <= 0:
+        return None
+    return (price_sum * 2 + wage) // (2 * wage)

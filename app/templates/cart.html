@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>장바구니 - 지갑이</title>
+</head>
+<body>
+<h1>장바구니</h1>
+
+{% if not c.ready %}
+<p>먼저 설정이 필요해요.</p>
+{% else %}
+<p><strong>{{ c.message }}</strong></p>
+{% if c.shortage %}<p>{{ c.shortage }}</p>{% endif %}
+{% if c.hours_text %}<p>{{ c.hours_text }}</p>{% endif %}
+
+{% if not c.ended %}
+<ul>
+{% for name in stages %}
+  <li>{{ name }}{% if name == c.now %} ← 지금{% endif %}{% if c.after and name == c.after.stage %} ← 사면{% endif %}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+<h2>사고 싶은 것</h2>
+<!-- 체크하면 바로 다시 그린다: 이 한 줄만 JS (앱 핵심 동작이라 예외) -->
+<form method="get" action="/cart">
+  {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+  {% for it in c["items"] %}
+  <p><label>
+    <input type="checkbox" name="item" value="{{ it.id }}" {% if it.checked %}checked{% endif %} onchange="this.form.submit()">
+    {{ it.name }} · {% if it.need_by %}{{ it.need_by }}{% else %}언제든{% endif %} · {{ "{:,}".format(it.price) }}원{% if it.chip %} · [{{ it.chip }}]{% endif %}
+  </label></p>
+  {% endfor %}
+  <noscript><button type="submit">보기</button></noscript>
+</form>
+<p>칩은 그것 하나만 샀을 때 지갑이 단계예요.</p>
+
+<p>[나눠 사기 추천 보기] (준비 중) · [그래도 지금 살게요] (준비 중)</p>
+
+<h2>사고 싶은 것 추가</h2>
+<form method="post" action="/cart/items">
+  {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+  <p><label>이름 <input type="text" name="name" maxlength="60" required></label></p>
+  <p><label>가격 <input type="number" name="price" min="1" required>원</label></p>
+  <p><label>필요한 날 <input type="date" name="need_by"></label> (비워도 돼요)</p>
+  <p><button type="submit">추가</button></p>
+</form>
+{% endif %}
+
+<p><a href="/{% if today_q %}?today={{ today_q }}{% endif %}">홈으로</a></p>
+</body>
+</html>

@@ -317,3 +317,62 @@ def test_첫_설정_중간에_실패하면_전부_되돌린다(conn):
     with pytest.raises(Exception):
         setup.create_account(conn, bad, date(2026, 10, 30))
     assert count(conn, "SELECT COUNT(*) FROM users", ()) == before
+
+
+# ---- 장바구니 미리보기 ----
+from app import cart
+
+
+@pytest.fixture
+def clean_wish(conn):
+    yield
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM wish_items WHERE user_id = %s AND name = %s", (USER_ID, "테스트 물건"))
+    conn.commit()
+
+
+def test_장바구니_미리보기(conn):
+    today = date(2026, 10, 31)  # 기록 후 25일, 여유 돈 224,100
+    ids = {w["name"]: w["item_id"] for w in queries.get_wish_items(conn, USER_ID)}
+    assert set(ids) == {"롱패딩", "니트", "목도리", "부츠"}
+
+    # 아무것도 안 고르면
+    c = cart.make_cart(conn, USER_ID, today, [])
+    assert c["now"] == "든든" and c["after"] is None
+    assert c["message"] == "담은 걸 체크하면 사면 어떻게 되는지 보여줘요"
+    assert [i["chip"] for i in c["items"]] == ["홀쭉", "든든", "든든", "홀쭉"]
+
+    # 롱패딩만
+    c = cart.make_cart(conn, USER_ID, today, [ids["롱패딩"]])
+    assert (c["after"]["daily"], c["after"]["stage"], c["after"]["short"]) == (1400, "홀쭉", 0)
+    assert c["hours"] == 18
+    assert c["message"] == "지금은 든든인데, 롱패딩을 사면 홀쭉이 나와요"
+    assert c["shortage"] is None
+
+    # 4개 다
+    c = cart.make_cart(conn, USER_ID, today, list(ids.values()))
+    assert (c["after"]["daily"], c["after"]["stage"], c["after"]["short"]) == (-6500, "나방", 161900)
+    assert c["hours"] == 37
+    assert c["message"] == "지금은 든든인데, 롱패딩 외 3개를 사면 나방이 나와요"
+    assert c["shortage"] == "최소 생활비를 161,900원 건드려요"
+    assert c["hours_text"] == "= 알바 약 37시간"
+
+
+def test_장바구니_물건_추가(conn, clean_wish):
+    queries.insert_wish_item(conn, USER_ID, "테스트 물건", 12000, None)
+    names = [w["name"] for w in queries.get_wish_items(conn, USER_ID)]
+    assert "테스트 물건" in names
+
+
+def test_장바구니_기간_마지막_날_밤이면_미리보기_없음(conn):
+    # 11/24 밤 기록 -> 남은 날 0. 기록을 잠깐 넣었다가 지운다
+    queries.save_balance_log(conn, USER_ID, date(2026, 11, 24), 100000, 0, 0)
+    try:
+        c = cart.make_cart(conn, USER_ID, date(2026, 11, 24), [])
+    finally:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM balance_logs WHERE user_id = %s AND log_date = %s",
+                        (USER_ID, date(2026, 11, 24)))
+        conn.commit()
+    assert c["ended"] and c["message"] == "이번 기간이 끝났어요. 새 기간에 다시 봐요"
+    assert all(i["chip"] is None for i in c["items"])

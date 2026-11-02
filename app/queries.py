@@ -91,7 +91,7 @@ def get_latest_balance_log(conn, user_id, today):
 def get_user(conn, user_id):
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT comfort_daily, emergency_fund FROM users WHERE user_id = %s",
+            "SELECT comfort_daily, emergency_fund, hourly_wage FROM users WHERE user_id = %s",
             (user_id,),
         )
         return cur.fetchone()
@@ -205,3 +205,23 @@ def create_account(conn, data, public_id, recovery_hash, start, end):
         conn.rollback()
         raise
     return user_id
+
+
+def get_wish_items(conn, user_id):
+    # 아직 안 산 것(wish)만
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT item_id, name, price, need_by FROM wish_items "
+            "WHERE user_id = %s AND status = 'wish' ORDER BY item_id",
+            (user_id,),
+        )
+        return cur.fetchall()
+
+
+def insert_wish_item(conn, user_id, name, price, need_by):
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO wish_items (user_id, name, price, need_by) VALUES (%s, %s, %s, %s)",
+            (user_id, name, price, need_by),
+        )
+    conn.commit()
