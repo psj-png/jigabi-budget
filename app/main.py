@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app import balance as balance_page
-from app import calc, queries
+from app import calc, queries, setup
 from app.db import get_conn
 from app.home import make_home
 
@@ -42,8 +42,103 @@ def start(request: Request, today: str = None):
 def demo(today: str = None):
     # 예시 사람으로 둘러보기: 쿠키를 심고 홈으로
     response = RedirectResponse("/" + (f"?today={today}" if today else ""), status_code=303)
-    response.set_cookie(COOKIE_NAME, SEED_PUBLIC_ID, httponly=True, samesite="lax",
+    set_login_cookie(response, SEED_PUBLIC_ID)
+    return response
+
+
+def set_login_cookie(response, public_id):
+    response.set_cookie(COOKIE_NAME, public_id, httponly=True, samesite="lax",
                         max_age=365 * 24 * 3600)
+
+
+# ---- 첫 설정 ----
+def step1_values(form):
+    # 1단계 칸에 채울 값. 처음엔 빈 칸, 검사에 걸려 다시 그릴 땐 적었던 값 그대로
+    def at(name, i):
+        items = form.getlist(name) if form else []
+        return items[i] if i < len(items) else ""
+
+    def one(name, default):
+        return form.get(name, default) if form else default
+
+    return {
+        "balance": one("balance", ""),
+        "incomes": [{"name": at("inc_name", i), "day": at("inc_day", i), "amount": at("inc_amount", i)}
+                    for i in range(setup.INCOME_ROWS)],
+        "main": one("main", ""),
+        "fixed": [{"name": at("fix_name", i), "day": at("fix_day", i), "amount": at("fix_amount", i)}
+                  for i in range(setup.FIXED_ROWS)],
+        "comfort_daily": one("comfort_daily", "10000"),
+        "hourly_wage": one("hourly_wage", "10320"),
+        "emergency_fund": one("emergency_fund", "0"),
+    }
+
+
+def render_step1(request, form, today, error):
+    return templates.TemplateResponse(request, "setup1.html", {
+        "v": step1_values(form), "today_q": today, "error": error,
+    })
+
+
+def render_step2(request, form, data, now, today, error):
+    def at(name, i):
+        items = form.getlist(name)
+        return items[i] if i < len(items) else ""
+
+    rows = [{"name": at("r_name", i), "wds": form.getlist(f"r_wd_{i}"), "meals": at("r_meals", i),
+             "price": at("r_price", i), "fare": at("r_fare", i), "start": at("r_start", i),
+             "end": at("r_end", i)} for i in range(setup.ROUTINE_ROWS)]
+    # 1단계 값은 hidden으로 다시 넣는다
+    hidden = [(k, v) for k, v in form.multi_items() if k in setup.STEP1_FIELDS]
+    return templates.TemplateResponse(request, "setup2.html", {
+        "s": setup.summary(data, now), "rows": rows, "hidden": hidden,
+        "today_q": today, "error": error,
+    })
+
+
+@app.get("/setup")
+def setup_get(request: Request, today: str = None):
+    parse_date(today, date.today())
+    return render_step1(request, None, today, None)
+
+
+@app.post("/setup/next")
+async def setup_next(request: Request):
+    form = await request.form()
+    today = form.get("today") or None
+    now = parse_date(today, date.today())
+    try:
+        data = setup.parse_step1(form)
+    except setup.FormError as e:
+        return render_step1(request, form, today, str(e))
+    return render_step2(request, form, data, now, today, None)
+
+
+@app.post("/setup/done")
+async def setup_done(request: Request):
+    form = await request.form()
+    today = form.get("today") or None
+    now = parse_date(today, date.today())
+    # 두 단계를 다시 검사한다
+    try:
+        data = setup.parse_step1(form)
+    except setup.FormError as e:
+        return render_step1(request, form, today, str(e))
+    try:
+        data["routines"] = setup.parse_step2(form)
+    except setup.FormError as e:
+        return render_step2(request, form, data, now, today, str(e))
+
+    conn = get_conn()
+    try:
+        user_id, public_id, code = setup.create_account(conn, data, now)
+    finally:
+        conn.close()
+    # 복구 코드는 이 화면에서 한 번만 보여준다 (redirect 안 함)
+    response = templates.TemplateResponse(request, "setup_done.html", {
+        "code": code, "today_q": today,
+    })
+    set_login_cookie(response, public_id)
     return response
 
 

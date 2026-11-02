@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>복구 코드 - 지갑이</title>
+</head>
+<body>
+<h1>준비됐어요</h1>
+<p>복구 코드</p>
+<p><strong style="font-size:1.5em; letter-spacing:0.1em">{{ code }}</strong></p>
+<p>이 코드는 다시 볼 수 없어요. 다른 기기에서 이어 쓸 때 필요해요.</p>
+<p><a href="/{% if today_q %}?today={{ today_q }}{% endif %}">홈으로</a></p>
+</body>
+</html>

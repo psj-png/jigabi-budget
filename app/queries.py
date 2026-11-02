@@ -155,3 +155,53 @@ def get_user_id(conn, public_id):
         cur.execute("SELECT user_id FROM users WHERE public_id = %s", (public_id,))
         row = cur.fetchone()
     return row["user_id"] if row else None
+
+
+def create_account(conn, data, public_id, recovery_hash, start, end):
+    # 첫 설정 저장: users -> incomes -> fixed_costs -> routines·routine_days -> periods
+    # 한 트랜잭션이라 중간에 실패하면 전부 되돌린다
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO users (public_id, recovery_hash, comfort_daily, hourly_wage, "
+                "emergency_fund) VALUES (%s, %s, %s, %s, %s)",
+                (public_id, recovery_hash, data["comfort_daily"], data["hourly_wage"],
+                 data["emergency_fund"]),
+            )
+            user_id = cur.lastrowid
+
+            for i in data["incomes"]:
+                cur.execute(
+                    "INSERT INTO incomes (user_id, name, day_of_month, amount, is_main) "
+                    "VALUES (%s, %s, %s, %s, %s)",
+                    (user_id, i["name"], i["day_of_month"], i["amount"], i["is_main"]),
+                )
+            for f in data["fixed"]:
+                cur.execute(
+                    "INSERT INTO fixed_costs (user_id, name, day_of_month, amount) "
+                    "VALUES (%s, %s, %s, %s)",
+                    (user_id, f["name"], f["day_of_month"], f["amount"]),
+                )
+            for r in data["routines"]:
+                cur.execute(
+                    "INSERT INTO routines (user_id, name, round_trip_fare, meals_out, "
+                    "meal_price, start_date, end_date) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (user_id, r["name"], r["round_trip_fare"], r["meals_out"],
+                     r["meal_price"], r["start_date"], r["end_date"]),
+                )
+                routine_id = cur.lastrowid
+                for weekday in r["weekdays"]:
+                    cur.execute(
+                        "INSERT INTO routine_days (routine_id, weekday) VALUES (%s, %s)",
+                        (routine_id, weekday),
+                    )
+            cur.execute(
+                "INSERT INTO periods (user_id, start_date, end_date, opening_balance) "
+                "VALUES (%s, %s, %s, %s)",
+                (user_id, start, end, data["balance"]),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    return user_id

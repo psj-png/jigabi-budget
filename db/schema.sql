@@ -21,7 +21,6 @@ CREATE TABLE users (
     comfort_daily INT NOT NULL DEFAULT 10000,
     hourly_wage INT NOT NULL DEFAULT 10320,
     emergency_fund INT NOT NULL DEFAULT 0,
-    coffee_price INT NULL,
     grocery_weekly INT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

@@ -232,3 +232,88 @@ def test_약속_추가하고_지우기(conn, clean_appts):
 def test_get_user_id(conn):
     assert queries.get_user_id(conn, "3f6b2a1c-7d4e-4b8a-9c2d-1e5f6a7b8c9d") == USER_ID
     assert queries.get_user_id(conn, "없는-아이디") is None
+
+
+# ---- 첫 설정 저장 (새 사용자를 만들고 끝나면 지운다) ----
+import hashlib
+
+from app import setup
+
+SEED_LIKE = {
+    "balance": 290000,
+    "incomes": [
+        {"name": "알바비", "day_of_month": 25, "amount": 420000, "is_main": True},
+        {"name": "용돈", "day_of_month": 1, "amount": 250000, "is_main": False},
+    ],
+    "fixed": [
+        {"name": "통신비", "day_of_month": 5, "amount": 33000},
+        {"name": "음악 구독", "day_of_month": 12, "amount": 10900},
+    ],
+    "comfort_daily": 10000, "hourly_wage": 10320, "emergency_fund": 0,
+    "routines": [
+        {"name": "학교", "weekdays": [0, 1, 2, 3], "meals_out": 2, "meal_price": 6000,
+         "round_trip_fare": 3100, "start_date": date(2026, 9, 1), "end_date": date(2026, 12, 18)},
+        {"name": "알바", "weekdays": [5, 6], "meals_out": 0, "meal_price": 0,
+         "round_trip_fare": 3100, "start_date": None, "end_date": None},
+    ],
+}
+
+
+def count(conn, sql, args):
+    with conn.cursor() as cur:
+        cur.execute(sql, args)
+        return list(cur.fetchone().values())[0]
+
+
+def test_첫_설정_저장(conn):
+    from app.home import make_home
+
+    today = date(2026, 10, 30)
+    user_id, public_id, code = setup.create_account(conn, SEED_LIKE, today)
+    try:
+        assert user_id != USER_ID
+
+        # a) 첫 기간
+        per = queries.get_period(conn, user_id, today)
+        assert (per["start_date"], per["end_date"], per["opening_balance"]) == \
+            (date(2026, 10, 30), date(2026, 11, 24), 290000)
+
+        # b) 약속 없이: 259,900 / 26 = 9,996 -> 9,900
+        h = make_home(conn, user_id, today)
+        assert (h["days_left"], h["min_living"], h["available"]) == (26, 236200, 540000)
+        assert (h["daily"], h["stage"]) == (9900, "든든")
+
+        # c) 11/7 약속 30,000 -> rules.md '기록 전' 예시와 같다
+        queries.insert_appointment(conn, user_id, date(2026, 11, 7), "술자리", 30000, 0)
+        h = make_home(conn, user_id, today)
+        assert (h["free"], h["daily"], h["stage"]) == (229900, 8800, "든든")
+
+        # d) 복구 코드의 해시와 public_id
+        with conn.cursor() as cur:
+            cur.execute("SELECT recovery_hash FROM users WHERE user_id = %s", (user_id,))
+            assert cur.fetchone()["recovery_hash"] == hashlib.sha256(code.encode("utf-8")).hexdigest()
+        assert queries.get_user_id(conn, public_id) == user_id
+        # 다른 사용자의 데이터와 섞이지 않는다
+        assert len(queries.get_appointments(conn, user_id)) == 1
+        assert len(queries.get_appointments(conn, USER_ID)) == 1  # seed의 술자리
+    finally:
+        with conn.cursor() as cur:
+            cur.execute("SELECT routine_id FROM routines WHERE user_id = %s", (user_id,))
+            routine_ids = [r["routine_id"] for r in cur.fetchall()]
+            cur.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
+        conn.commit()
+
+    # 사용자를 지우면 딸린 행도 CASCADE로 같이 지워진다
+    for table in ["incomes", "fixed_costs", "routines", "appointments", "periods"]:
+        assert count(conn, f"SELECT COUNT(*) FROM {table} WHERE user_id = %s", (user_id,)) == 0
+    assert len(routine_ids) == 2
+    assert count(conn, "SELECT COUNT(*) FROM routine_days WHERE routine_id IN (%s, %s)",
+                 tuple(routine_ids)) == 0
+
+
+def test_첫_설정_중간에_실패하면_전부_되돌린다(conn):
+    before = count(conn, "SELECT COUNT(*) FROM users", ())
+    bad = dict(SEED_LIKE, fixed=[{"name": "x" * 30, "day_of_month": 5, "amount": 1}])  # 이름이 너무 김
+    with pytest.raises(Exception):
+        setup.create_account(conn, bad, date(2026, 10, 30))
+    assert count(conn, "SELECT COUNT(*) FROM users", ()) == before
