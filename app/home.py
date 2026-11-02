@@ -6,14 +6,31 @@ from app import calc, queries
 
 def make_home(conn, user_id, today):
     user = queries.get_user(conn, user_id)
-    per = queries.get_period(conn, user_id, today)
     incomes = queries.get_incomes(conn, user_id)
     main = [i for i in incomes if i["is_main"]]
-    if user is None or per is None or not main:
+    if user is None or not main:
         return {"ready": False}
 
     # 기간 기준 수입일은 주 수입의 날짜
     income_day = main[0]["day_of_month"]
+
+    routines = queries.get_routines(conn, user_id)
+    fixed = queries.get_fixed_costs(conn, user_id)
+    appts = queries.get_appointments(conn, user_id)
+
+    # 오늘을 덮는 기간이 없으면 지금 만든다 (R1-2)
+    per = queries.get_period(conn, user_id, today)
+    if per is None:
+        new_start, new_end, _ = calc.period(today, income_day)
+        before = queries.get_latest_balance_log(conn, user_id, new_start - timedelta(days=1))
+        if before is None:
+            return {"ready": False}
+        # 마지막 밤 잔액에서 시작일 전날까지 안 적은 날을 메운 값이 시작 잔액
+        opening = calc.estimate_balance(
+            before["balance"], before["log_date"] + timedelta(days=1),
+            new_start - timedelta(days=1), routines, fixed, appts, incomes)
+        queries.insert_period(conn, user_id, new_start, new_end, opening)
+        per = queries.get_period(conn, user_id, today)
 
     # 잔액 고르기: 오늘 밤 기록 > 기간 안의 가장 최근 기록 > 기간 시작 잔액
     # count_from: 수입·고정지출·약속·최소 생활비를 세는 첫날 (잔액 기준일 다음 날)
@@ -32,16 +49,16 @@ def make_home(conn, user_id, today):
     else:
         balance = per["opening_balance"]
         count_from = per["start_date"]
-        missed_days = (today - per["start_date"]).days
+        if latest is not None:
+            # 기간 안에 기록이 없어도 그 전 기록이 있으면 그 기록일부터 센다
+            missed_days = (today - latest["log_date"]).days - 1
+        else:
+            missed_days = (today - per["start_date"]).days
 
     # 남은 날은 지금처럼 오늘부터(밤 기록이 있으면 내일부터)
     start, end, days_left = calc.period(today, income_day, app_start=per["start_date"],
                                         logged_tonight=logged)
     first = count_from  # 안 적은 날은 최소 생활비와 약속만큼 썼다고 보고 여유 돈에서 뺀다 (R10)
-
-    routines = queries.get_routines(conn, user_id)
-    fixed = queries.get_fixed_costs(conn, user_id)
-    appts = queries.get_appointments(conn, user_id)
 
     min_living = calc.min_living(first, end, routines)
     incomes_sum = calc.incomes_sum(first, end, incomes)

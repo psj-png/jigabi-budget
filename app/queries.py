@@ -94,3 +94,13 @@ def get_user(conn, user_id):
             (user_id,),
         )
         return cur.fetchone()
+
+
+def insert_period(conn, user_id, start, end, opening_balance):
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO periods (user_id, start_date, end_date, opening_balance) "
+            "VALUES (%s, %s, %s, %s)",
+            (user_id, start, end, opening_balance),
+        )
+    conn.commit()

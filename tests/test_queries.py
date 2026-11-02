@@ -87,3 +87,24 @@ def test_홈_화면_기록이_하나도_없을_때(conn):
     # 기간 시작(10/30)부터 4일을 안 적은 것으로 본다
     assert h["missed_days"] == 4
     assert (h["days_left"], h["free"], h["daily"], h["stage"]) == (22, 229900, 10400, "빵빵")
+
+
+def test_새_기간_만들기(conn):
+    from app.home import make_home
+
+    # 11/25 홈: 그날을 덮는 기간이 없어서 만든다. 마지막 기록은 10/30 밤 284,200
+    try:
+        h = make_home(conn, USER_ID, date(2026, 11, 25))
+        per = queries.get_period(conn, USER_ID, date(2026, 11, 25))
+    finally:
+        # periods에 넣은 행을 지워서 다른 테스트와 seed에 영향이 없게 한다
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM periods WHERE user_id = %s AND start_date = %s",
+                        (USER_ID, date(2026, 11, 25)))
+        conn.commit()
+
+    assert h["ready"]
+    assert (per["start_date"], per["end_date"], per["opening_balance"]) ==         (date(2026, 11, 25), date(2026, 12, 24), 224100)
+    assert (h["days_left"], h["free"], h["daily"], h["stage"]) == (30, 614000, 20400, "빵빵")
+    assert h["budget"] == 35500  # 수요일: 학교 15,100 + 하루 여유 20,400
+    assert h["missed_days"] == 25

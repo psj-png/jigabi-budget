@@ -123,3 +123,15 @@ def today_budget(day, routines, appointments, daily):
     if daily is None:
         return None
     return min_living_on(day, routines) + daily + appointments_sum(day, day, appointments)
+
+
+def estimate_balance(balance, start, end, routines, fixed, appts, incomes):
+    # start~end 동안 수입은 더하고 고정지출·약속·최소 생활비는 뺀 잔액
+    # (안 적은 날은 최소 생활비와 약속만큼 썼다고 본다, R10). start > end면 그대로
+    if start > end:
+        return balance
+    return (balance
+            + incomes_sum(start, end, incomes)
+            - monthly_sum(start, end, fixed)
+            - appointments_sum(start, end, appts)
+            - min_living(start, end, routines))

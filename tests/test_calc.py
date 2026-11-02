@@ -1,6 +1,6 @@
 from datetime import date
 
-from app.calc import (appointments_sum, daily_margin, first_day, free_money,
+from app.calc import (appointments_sum, daily_margin, estimate_balance, first_day, free_money,
                       min_living, monthly_sum, incomes_sum, period, stage,
                       today_budget)
 
@@ -180,3 +180,17 @@ def test_기간_마지막_날_밤_기록하면_남은_날_0이고_하루_여유_
 def test_R2_이번_기간_수입_합은_용돈만():
     # 10/30~11/24: 알바비 25일은 범위 밖이라 11/1 용돈 250,000만
     assert incomes_sum(date(2026, 10, 30), date(2026, 11, 24), INCOMES) == 250000
+
+
+def test_estimate_balance():
+    # 10/30 밤 잔액 284,200에서 10/31~11/24를 안 적은 날로 메우면 224,100
+    # (10/30 밤 기록 후 여유 돈과 같아야 한다)
+    est = estimate_balance(284200, date(2026, 10, 31), date(2026, 11, 24),
+                           ROUTINES, FIXED, APPTS, INCOMES)
+    assert est == 224100
+    assert est == 계산(TODAY, True, 284200, TODAY)[3]
+
+
+def test_estimate_balance_start가_end보다_뒤면_그대로():
+    assert estimate_balance(284200, date(2026, 11, 25), date(2026, 11, 24),
+                            ROUTINES, FIXED, APPTS, INCOMES) == 284200
