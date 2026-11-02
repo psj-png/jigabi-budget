@@ -28,6 +28,16 @@
 {% endif %}
 {% endif %}
 <p>여유 돈: {{ "{:,}".format(h.free) }}원</p>
+
+<h2>여유 돈이 나온 과정</h2>
+<ul>
+  <li>쓸 수 있는 돈 {{ "{:,}".format(h.available) }}원</li>
+  <li>− 고정지출 {{ "{:,}".format(h.fixed) }}원</li>
+  <li>− 약속 {{ "{:,}".format(h.appt) }}원</li>
+  <li>− 최소 생활비 {{ "{:,}".format(h.min_living) }}원</li>
+  <li>− 비상금 상환 {{ "{:,}".format(h.repay) }}원</li>
+  <li>= 여유 돈 {{ "{:,}".format(h.free) }}원</li>
+</ul>
 {% endif %}
 <p><a href="/wishes">사고 싶은 것</a></p>
 </body>

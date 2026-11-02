@@ -44,14 +44,11 @@ def make_home(conn, user_id, today):
     appts = queries.get_appointments(conn, user_id)
 
     min_living = calc.min_living(first, end, routines)
-    free = calc.free_money(
-        balance,
-        calc.other_incomes_sum(first, end, incomes),
-        calc.monthly_sum(first, end, fixed),
-        calc.appointments_sum(first, end, appts),
-        min_living,
-        per["repay_amount"],
-    )
+    incomes_sum = calc.other_incomes_sum(first, end, incomes)
+    fixed_sum = calc.monthly_sum(first, end, fixed)
+    appt_sum = calc.appointments_sum(first, end, appts)
+    repay = per["repay_amount"]
+    free = calc.free_money(balance, incomes_sum, fixed_sum, appt_sum, min_living, repay)
     daily = calc.daily_margin(free, days_left)
 
     home = {
@@ -60,6 +57,12 @@ def make_home(conn, user_id, today):
         "end": end,
         "days_left": days_left,
         "free": free,
+        # 여유 돈이 나온 과정 (네 칸)
+        "available": balance + incomes_sum,
+        "fixed": fixed_sum,
+        "appt": appt_sum,
+        "min_living": min_living,
+        "repay": repay,
         "daily": daily,
         "stage": None,
         "budget": None,

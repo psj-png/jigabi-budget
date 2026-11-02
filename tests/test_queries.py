@@ -63,6 +63,10 @@ def test_홈_화면_값(conn):
     assert (h["days_left"], h["free"], h["daily"], h["stage"]) == (25, 224100, 8900, "든든")
     assert h["logged"] and h["budget"] is None and h["missed_days"] == 0
 
+    # 여유 돈이 나온 과정 (네 칸)
+    assert (h["available"], h["fixed"], h["appt"], h["min_living"], h["repay"]) ==         (534200, 43900, 30000, 236200, 0)
+    assert h["available"] - h["fixed"] - h["appt"] - h["min_living"] - h["repay"] == h["free"]
+
     # 11/3: 마지막 기록이 10/30이라 사이 3일(10/31~11/2)을 최소 생활비만큼 쓴 것으로 계산
     h = make_home(conn, USER_ID, date(2026, 11, 3))
     assert h["missed_days"] == 3
