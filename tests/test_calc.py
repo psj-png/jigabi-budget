@@ -152,8 +152,9 @@ def test_R7_오늘_쓸_수_있는_돈():
 
 
 def test_R7_약속_교통비도_더한다():
+    # 이 약속을 넣으면 하루 여유가 8,800 -> 6,800 (rules.md 확인용 예시)
     appts = [{"appt_date": date(2026, 11, 13), "amount": 50000, "transport_fare": 3100}]
-    assert today_budget(date(2026, 11, 13), ROUTINES, appts, 8800) == 61900
+    assert today_budget(date(2026, 11, 13), ROUTINES, appts, 6800) == 59900
 
 
 def test_R7_하루_여유가_None이면_None():
