@@ -1,7 +1,8 @@
 from datetime import date
 
 from app.calc import (appointments_sum, daily_margin, first_day, free_money,
-                      min_living, monthly_sum, other_incomes_sum, period, stage)
+                      min_living, monthly_sum, other_incomes_sum, period, stage,
+                      today_budget)
 
 
 def test_R1_예시_10월30일():
@@ -137,3 +138,23 @@ def test_다음_기간_예시():
     # 11/25~12/24: 시작 잔액은 알바비 420,000, 다른 수입은 12/1 용돈 250,000
     # 주 수입(알바비)을 또 더하면 1,090,000이 되므로 670,000이어야 한다
     assert 계산(date(2026, 11, 25), False, 420000) == (30, 236200, 670000, 389900, 12900, "빵빵")  # 넉넉 기준 10,000 이상
+
+
+def test_R7_오늘_쓸_수_있는_돈():
+    # 기록 전 하루 여유 8,800 기준
+    def 오늘(day):
+        return today_budget(day, ROUTINES, APPTS, 8800)
+
+    assert 오늘(date(2026, 10, 30)) == 8800    # 금: 가는 곳 없음
+    assert 오늘(date(2026, 10, 31)) == 11900   # 토: 알바 교통비 3,100
+    assert 오늘(date(2026, 11, 2)) == 23900    # 월: 학교 15,100
+    assert 오늘(date(2026, 11, 7)) == 41900    # 토: 알바 3,100 + 술자리 30,000
+
+
+def test_R7_약속_교통비도_더한다():
+    appts = [{"appt_date": date(2026, 11, 13), "amount": 50000, "transport_fare": 3100}]
+    assert today_budget(date(2026, 11, 13), ROUTINES, appts, 8800) == 61900
+
+
+def test_R7_하루_여유가_None이면_None():
+    assert today_budget(date(2026, 11, 7), ROUTINES, APPTS, None) is None

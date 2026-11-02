@@ -115,3 +115,11 @@ def stage(daily, comfort=10000):
     if daily >= 0:
         return "텅텅"
     return "나방"
+
+
+def today_budget(day, routines, appointments, daily):
+    # R7 오늘 쓸 수 있는 돈 = 오늘의 R3 + 하루 여유 + 오늘 약속 금액(교통비 포함)
+    # 하루 여유가 없으면(기간 끝) None
+    if daily is None:
+        return None
+    return min_living_on(day, routines) + daily + appointments_sum(day, day, appointments)
