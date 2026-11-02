@@ -85,3 +85,12 @@ def get_latest_balance_log(conn, user_id, today):
             (user_id, today),
         )
         return cur.fetchone()
+
+
+def get_user(conn, user_id):
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT comfort_daily, emergency_fund FROM users WHERE user_id = %s",
+            (user_id,),
+        )
+        return cur.fetchone()

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>지갑이</title>
+</head>
+<body>
+<h1>지갑이</h1>
+{% if not h.ready %}
+<p>기간 정보가 없어요. 먼저 설정이 필요해요.</p>
+{% else %}
+<p>{{ h.today }} 기준 · 남은 날 {{ h.days_left }}일 (기간 끝 {{ h.end }})</p>
+
+{% if h.missed_days > 0 %}
+<p>{{ h.missed_days }}일 동안 밤 잔액을 안 적었어요</p>
+{% endif %}
+
+{% if h.daily is none %}
+<p>이번 기간 끝</p>
+{% else %}
+<p>지갑이 단계: <strong>{{ h.stage }}</strong></p>
+<p>하루 여유: {{ "{:,}".format(h.daily) }}원</p>
+{% if h.budget is not none %}
+<p>오늘 쓸 수 있는 돈: {{ "{:,}".format(h.budget) }}원</p>
+{% elif h.logged %}
+<p>오늘 밤 잔액을 적었어요</p>
+{% endif %}
+{% endif %}
+<p>여유 돈: {{ "{:,}".format(h.free) }}원</p>
+{% endif %}
+<p><a href="/wishes">사고 싶은 것</a></p>
+</body>
+</html>

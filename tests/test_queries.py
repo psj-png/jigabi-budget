@@ -53,3 +53,17 @@ def test_가장_최근_밤_잔액(conn):
     assert queries.get_latest_balance_log(conn, USER_ID, date(2026, 10, 29)) is None
     log = queries.get_latest_balance_log(conn, USER_ID, date(2026, 11, 5))
     assert log["log_date"] == TODAY and log["balance"] == 284200
+
+
+def test_홈_화면_값(conn):
+    from app.home import make_home
+
+    # 10/30 밤 기록이 있는 상태: 남은 날 25, 여유 돈 224,100, 하루 여유 8,900, 든든
+    h = make_home(conn, USER_ID, TODAY)
+    assert (h["days_left"], h["free"], h["daily"], h["stage"]) == (25, 224100, 8900, "든든")
+    assert h["logged"] and h["budget"] is None and h["missed_days"] == 0
+
+    # 기록이 없는 날(기간 시작 전 기록은 안 씀): 10/30 아침 기준 = 기록 전 값
+    # 11/3은 10/30 기록이 있고 사이가 3일 비었다
+    h = make_home(conn, USER_ID, date(2026, 11, 3))
+    assert h["missed_days"] == 3
