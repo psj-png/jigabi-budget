@@ -16,23 +16,28 @@ def make_home(conn, user_id, today):
     income_day = main[0]["day_of_month"]
 
     # 잔액 고르기: 오늘 밤 기록 > 기간 안의 가장 최근 기록 > 기간 시작 잔액
+    # count_from: 수입·고정지출·약속·최소 생활비를 세는 첫날 (잔액 기준일 다음 날)
     logged = False
-    missed_days = 0
     today_log = queries.get_balance_log(conn, user_id, today)
     latest = queries.get_latest_balance_log(conn, user_id, today)
     if today_log is not None:
         balance = today_log["balance"]
         logged = True
+        count_from = today + timedelta(days=1)
+        missed_days = 0
     elif latest is not None and latest["log_date"] >= per["start_date"]:
         balance = latest["balance"]
-        # 어제 밤 기록이 아니면 사이가 빈 날을 센다 (계산으로 메우지는 않음)
+        count_from = latest["log_date"] + timedelta(days=1)
         missed_days = (today - latest["log_date"]).days - 1
     else:
         balance = per["opening_balance"]
+        count_from = per["start_date"]
+        missed_days = (today - per["start_date"]).days
 
+    # 남은 날은 지금처럼 오늘부터(밤 기록이 있으면 내일부터)
     start, end, days_left = calc.period(today, income_day, app_start=per["start_date"],
                                         logged_tonight=logged)
-    first = calc.first_day(today, logged)
+    first = count_from  # 안 적은 날은 최소 생활비와 약속만큼 썼다고 보고 여유 돈에서 뺀다 (R10)
 
     routines = queries.get_routines(conn, user_id)
     fixed = queries.get_fixed_costs(conn, user_id)

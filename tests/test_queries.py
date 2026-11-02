@@ -63,7 +63,22 @@ def test_홈_화면_값(conn):
     assert (h["days_left"], h["free"], h["daily"], h["stage"]) == (25, 224100, 8900, "든든")
     assert h["logged"] and h["budget"] is None and h["missed_days"] == 0
 
-    # 기록이 없는 날(기간 시작 전 기록은 안 씀): 10/30 아침 기준 = 기록 전 값
-    # 11/3은 10/30 기록이 있고 사이가 3일 비었다
+    # 11/3: 마지막 기록이 10/30이라 사이 3일(10/31~11/2)을 최소 생활비만큼 쓴 것으로 계산
     h = make_home(conn, USER_ID, date(2026, 11, 3))
     assert h["missed_days"] == 3
+    assert (h["days_left"], h["free"], h["daily"], h["stage"]) == (22, 224100, 10100, "빵빵")
+
+
+def test_홈_화면_기록이_하나도_없을_때(conn):
+    from app.home import make_home
+
+    # seed의 10/30 밤 기록을 빼고 계산 (끝나면 되돌림)
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM balance_logs WHERE user_id = %s", (USER_ID,))
+    try:
+        h = make_home(conn, USER_ID, date(2026, 11, 3))
+    finally:
+        conn.rollback()
+    # 기간 시작(10/30)부터 4일을 안 적은 것으로 본다
+    assert h["missed_days"] == 4
+    assert (h["days_left"], h["free"], h["daily"], h["stage"]) == (22, 229900, 10400, "빵빵")
