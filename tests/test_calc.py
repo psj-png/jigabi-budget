@@ -2,7 +2,7 @@ from datetime import date
 
 from app.calc import (appointments_sum, daily_margin, estimate_balance, first_day, free_money,
                       min_living, monthly_sum, incomes_sum, period, spent_money, stage,
-                      today_budget)
+                      today_budget, transport_default)
 
 
 def test_R1_예시_10월30일():
@@ -74,14 +74,14 @@ APPTS = [{"appt_date": date(2026, 11, 7), "amount": 30000, "transport_fare": 0}]
 TODAY = date(2026, 10, 30)
 
 
-def 계산(today, logged_tonight, balance, app_start=None):
+def 계산(today, logged_tonight, balance, app_start=None, appts=APPTS):
     # 남은 날 범위를 정해 쓸 수 있는 돈~단계까지 계산. 쓸 수 있는 돈도 같이 돌려줌
     start, end, days_left = period(today, 25, app_start=app_start, logged_tonight=logged_tonight)
     f = first_day(today, logged_tonight)
     ml = min_living(f, end, ROUTINES)
     incomes = incomes_sum(f, end, INCOMES)
     free = free_money(balance, incomes, monthly_sum(f, end, FIXED),
-                      appointments_sum(f, end, APPTS), ml)
+                      appointments_sum(f, end, appts), ml)
     daily = daily_margin(free, days_left)
     return days_left, ml, balance + incomes, free, daily, stage(daily)
 
@@ -199,3 +199,19 @@ def test_estimate_balance_start가_end보다_뒤면_그대로():
 def test_R10_쓴_돈():
     # seed의 10/30 밤 기록: 지난 잔액 290,000 -> 지금 284,200이면 5,800원 씀
     assert spent_money(290000, 0, 0, 0, 284200) == 5800
+
+
+def test_R9_교통비_기본값():
+    d = date
+    assert transport_default(d(2026, 11, 12), ROUTINES) == 0     # 목: 학교
+    assert transport_default(d(2026, 11, 13), ROUTINES) == 3100  # 금: 가는 곳 없음
+    assert transport_default(d(2026, 11, 14), ROUTINES) == 0     # 토: 알바
+    assert transport_default(d(2026, 12, 21), ROUTINES) == 3100  # 월이지만 학기 끝
+    assert transport_default(d(2026, 11, 13), []) == 0           # 루틴이 없으면 0
+
+
+def test_약속_추가하면_하루_여유가_줄어든다():
+    # 기록 전 10/30에 11/13 약속 50,000 + 교통 3,100을 더하면 8,800 -> 6,800
+    appts = APPTS + [{"appt_date": date(2026, 11, 13), "amount": 50000, "transport_fare": 3100}]
+    assert 계산(TODAY, False, 290000, TODAY)[4] == 8800
+    assert 계산(TODAY, False, 290000, TODAY, appts)[4] == 6800

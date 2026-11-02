@@ -40,18 +40,31 @@ def period(today, income_day, app_start=None, logged_tonight=False):
     return start, end, days_left
 
 
+def goes_on(day, r):
+    # R3-2 그날 가는 곳인지: 요일이 맞고 시작일~끝나는 날 안
+    if day.weekday() not in r["weekdays"]:
+        return False
+    if r["start_date"] is not None and day < r["start_date"]:
+        return False
+    if r["end_date"] is not None and day > r["end_date"]:
+        return False
+    return True
+
+
 def min_living_on(day, routines):
     # R3 그날 최소 생활비: 그날 가는 곳마다 끼니값 + 왕복 교통비
     total = 0
     for r in routines:
-        if day.weekday() not in r["weekdays"]:
-            continue
-        if r["start_date"] is not None and day < r["start_date"]:
-            continue
-        if r["end_date"] is not None and day > r["end_date"]:
-            continue
-        total += r["meals_out"] * r["meal_price"] + r["round_trip_fare"]
+        if goes_on(day, r):
+            total += r["meals_out"] * r["meal_price"] + r["round_trip_fare"]
     return total
+
+
+def transport_default(day, routines):
+    # R9 약속 교통비 기본값: 그날 가는 곳이 있으면 0(끔), 없으면 루틴 왕복 교통비 중 가장 큰 값
+    if any(goes_on(day, r) for r in routines):
+        return 0
+    return max((r["round_trip_fare"] for r in routines), default=0)
 
 
 def min_living(start, end, routines):

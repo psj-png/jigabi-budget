@@ -5,6 +5,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app import balance as balance_page
+from app import calc, queries
 from app.db import get_conn
 from app.home import make_home
 
@@ -81,6 +82,56 @@ def balance_post(request: Request, day: str = Form(), balance: int = Form(),
         return balance_view(request, form, now, today, message)
     # 저장하고 같은 today로 홈에 간다
     return RedirectResponse("/" + (f"?today={today}" if today else ""), status_code=303)
+
+
+@app.get("/appointments")
+def appointments_get(request: Request, today: str = None, day: str = None):
+    now = parse_date(today, date.today())
+    target = parse_date(day, None)
+    if target is not None and target < now:
+        raise HTTPException(status_code=400, detail="오늘보다 앞선 날짜는 안 돼요")
+
+    conn = get_conn()
+    try:
+        appts = [a for a in queries.get_appointments(conn, 1) if a["appt_date"] >= now]
+        # 2단계: 날짜를 고르면 그날 교통비 기본값(R9)을 채워 보여준다
+        fare = None
+        if target is not None:
+            fare = calc.transport_default(target, queries.get_routines(conn, 1))
+    finally:
+        conn.close()
+    return templates.TemplateResponse(request, "appointments.html", {
+        "appts": appts, "day": target, "fare": fare, "today_q": today, "now": now,
+    })
+
+
+@app.post("/appointments")
+def appointments_post(day: str = Form(), title: str = Form(min_length=1, max_length=40),
+                      amount: int = Form(ge=0), transport: str = Form(None),
+                      transport_fare: int = Form(0, ge=0), today: str = Form(None)):
+    now = parse_date(today, date.today())
+    target = parse_date(day, None)
+    if target is None or target < now:
+        raise HTTPException(status_code=400, detail="오늘보다 앞선 날짜는 안 돼요")
+
+    # 체크를 끄면 교통비 0
+    fare = transport_fare if transport else 0
+    conn = get_conn()
+    try:
+        queries.insert_appointment(conn, 1, target, title, amount, fare)
+    finally:
+        conn.close()
+    return RedirectResponse("/appointments" + (f"?today={today}" if today else ""), status_code=303)
+
+
+@app.post("/appointments/{appt_id}/delete")
+def appointments_delete(appt_id: int, today: str = Form(None)):
+    conn = get_conn()
+    try:
+        queries.delete_appointment(conn, 1, appt_id)
+    finally:
+        conn.close()
+    return RedirectResponse("/appointments" + (f"?today={today}" if today else ""), status_code=303)
 
 
 @app.get("/wishes")

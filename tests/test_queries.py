@@ -198,3 +198,32 @@ def test_밤_잔액_앱_시작_전_날짜는_못_적는다(conn, clean):
     assert balance_page.save(conn, USER_ID, today, day, 100000, 0) == message
     assert queries.get_balance_log(conn, USER_ID, day) is None
     assert queries.get_period(conn, USER_ID, day) is None
+
+
+# ---- 약속 (DB에 넣으므로 끝나면 지운다) ----
+@pytest.fixture
+def clean_appts(conn):
+    yield
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM appointments WHERE user_id = %s AND appt_date = %s",
+                    (USER_ID, date(2026, 11, 13)))
+    conn.commit()
+
+
+def test_약속_추가하고_지우기(conn, clean_appts):
+    from app.home import make_home
+
+    today = date(2026, 10, 31)  # 10/30 밤 기록 다음 날
+    h = make_home(conn, USER_ID, today)
+    assert (h["free"], h["daily"], h["budget"]) == (224100, 8900, 12000)
+
+    # 11/13 약속 50,000 + 교통 3,100 -> 여유 돈 171,000, 하루 여유 6,800, 오늘 3,100 + 6,800
+    queries.insert_appointment(conn, USER_ID, date(2026, 11, 13), "테스트 약속", 50000, 3100)
+    h = make_home(conn, USER_ID, today)
+    assert (h["free"], h["daily"], h["stage"], h["budget"]) == (171000, 6800, "든든", 9900)
+
+    # 지우면 원래대로
+    appt = [a for a in queries.get_appointments(conn, USER_ID) if a["title"] == "테스트 약속"][0]
+    queries.delete_appointment(conn, USER_ID, appt["appt_id"])
+    h = make_home(conn, USER_ID, today)
+    assert (h["free"], h["daily"], h["budget"]) == (224100, 8900, 12000)

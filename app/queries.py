@@ -47,7 +47,8 @@ def get_fixed_costs(conn, user_id):
 def get_appointments(conn, user_id):
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT appt_date, amount, transport_fare FROM appointments WHERE user_id = %s",
+            "SELECT appt_id, appt_date, title, amount, transport_fare FROM appointments "
+            "WHERE user_id = %s ORDER BY appt_date, appt_id",
             (user_id,),
         )
         return cur.fetchall()
@@ -124,5 +125,25 @@ def update_opening_balance(conn, user_id, start_date, opening_balance):
         cur.execute(
             "UPDATE periods SET opening_balance = %s WHERE user_id = %s AND start_date = %s",
             (opening_balance, user_id, start_date),
+        )
+    conn.commit()
+
+
+def insert_appointment(conn, user_id, appt_date, title, amount, transport_fare):
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO appointments (user_id, appt_date, title, amount, transport_fare) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            (user_id, appt_date, title, amount, transport_fare),
+        )
+    conn.commit()
+
+
+def delete_appointment(conn, user_id, appt_id):
+    # 남의 약속은 못 지우게 user_id도 같이 건다
+    with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM appointments WHERE appt_id = %s AND user_id = %s",
+            (appt_id, user_id),
         )
     conn.commit()
