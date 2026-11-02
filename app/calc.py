@@ -79,6 +79,11 @@ def monthly_sum(start, end, items):
     return total
 
 
+def other_incomes_sum(start, end, incomes):
+    # R2 기간 안에 들어올 다른 수입. 기간을 만든 주 수입(is_main)은 시작 잔액에 이미 있어서 뺀다
+    return monthly_sum(start, end, [i for i in incomes if not i["is_main"]])
+
+
 def appointments_sum(start, end, appointments):
     # 남은 약속 합 (교통비 포함)
     return sum(a["amount"] + a["transport_fare"]
@@ -103,9 +108,9 @@ def stage(daily, comfort=10000):
     # R8 지갑이 단계
     if daily >= comfort:
         return "빵빵"
-    if daily >= comfort / 2:
+    if daily >= comfort // 2:
         return "든든"
-    if daily >= comfort / 10:
+    if daily >= comfort // 10:
         return "홀쭉"
     if daily >= 0:
         return "텅텅"
