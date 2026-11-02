@@ -2,6 +2,7 @@
 from datetime import timedelta
 
 from app import calc, queries
+from app.home import ensure_period
 
 
 def _blocked(conn, user_id, today, day):
@@ -13,7 +14,7 @@ def _blocked(conn, user_id, today, day):
 
 def _context(conn, user_id, day):
     # day가 속한 기간 기준으로 지난 잔액과 그 뒤 범위(start~day)를 정한다
-    per = queries.get_period(conn, user_id, day)
+    per = ensure_period(conn, user_id, day)  # 기간이 없으면 만든다
     if per is None:
         return None
 
@@ -35,26 +36,31 @@ def _context(conn, user_id, day):
     }
 
 
+NO_PERIOD = "앱을 시작하기 전 날짜라 적을 수 없어요"
+
+
 def get_form(conn, user_id, today, day):
-    form = {"day": day, "ready": False, "blocked": _blocked(conn, user_id, today, day),
-            "show_income": False, "income_plan": 0}
+    # message가 있으면 폼 대신 그 문장을 보여준다
+    form = {"day": day, "message": None, "show_income": False, "income_plan": 0}
     ctx = _context(conn, user_id, day)
-    if ctx is not None:
-        form["ready"] = True
-        # 범위에 예정 수입이 있을 때만 '들어온 돈' 칸을 보여준다
-        form["income_plan"] = ctx["income_plan"]
-        form["show_income"] = ctx["income_plan"] > 0
+    if ctx is None:
+        form["message"] = NO_PERIOD
+        return form
+    form["message"] = _blocked(conn, user_id, today, day)
+    # 범위에 예정 수입이 있을 때만 '들어온 돈' 칸을 보여준다
+    form["income_plan"] = ctx["income_plan"]
+    form["show_income"] = ctx["income_plan"] > 0
     return form
 
 
 def save(conn, user_id, today, day, balance, income_in):
     # 저장하면 None, 못 저장하면 이유(문장)를 돌려준다
+    ctx = _context(conn, user_id, day)
+    if ctx is None:
+        return NO_PERIOD
     message = _blocked(conn, user_id, today, day)
     if message:
         return message
-    ctx = _context(conn, user_id, day)
-    if ctx is None:
-        return "기간 정보가 없어요. 홈을 먼저 열어 주세요"
 
     # 기록한 구매는 구매 테이블이 생기기 전까지 0
     spent = calc.spent_money(ctx["prev_balance"], income_in, ctx["fixed_out"], 0, balance)

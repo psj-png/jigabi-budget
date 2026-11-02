@@ -15,10 +15,8 @@
 
 {% if error %}
 <p>{{ error }}</p>
-{% elif f.blocked %}
-<p>{{ f.blocked }}</p>
-{% elif not f.ready %}
-<p>기간 정보가 없어요. 홈을 먼저 열어 주세요</p>
+{% elif f.message %}
+<p>{{ f.message }}</p>
 {% else %}
 <form method="post" action="/balance">
   <input type="hidden" name="day" value="{{ f.day }}">

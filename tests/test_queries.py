@@ -176,4 +176,25 @@ def test_밤_잔액_오늘_기록이_있으면_어제는_못_적는다(conn, cle
     message = balance_page.save(conn, USER_ID, today, date(2026, 11, 24), 100000, 0)
     assert message == "오늘 밤 잔액을 이미 적어서 어제는 못 적어요"
     assert queries.get_balance_log(conn, USER_ID, date(2026, 11, 24)) is None
-    assert balance_page.get_form(conn, USER_ID, today, date(2026, 11, 24))["blocked"] == message
+    assert balance_page.get_form(conn, USER_ID, today, date(2026, 11, 24))["message"] == message
+
+
+def test_밤_잔액_기간이_없어도_폼부터_열_수_있다(conn, clean):
+    # 홈을 열지 않고 11/25 폼부터: 11/25 기간이 생기고 시작 잔액은 224,100
+    today = date(2026, 11, 25)
+    f = balance_page.get_form(conn, USER_ID, today, today)
+    assert f["message"] is None and f["show_income"] and f["income_plan"] == 420000
+    assert queries.get_period(conn, USER_ID, today)["opening_balance"] == 224100
+
+    # 오늘 잔액 600,000: 224,100 + 420,000 - 0 - 600,000 = 44,100
+    assert balance_page.save(conn, USER_ID, today, today, 600000, 420000) is None
+    assert queries.get_balance_log(conn, USER_ID, today)["spent"] == 44100
+
+
+def test_밤_잔액_앱_시작_전_날짜는_못_적는다(conn, clean):
+    today, day = date(2026, 10, 30), date(2026, 10, 29)
+    message = "앱을 시작하기 전 날짜라 적을 수 없어요"
+    assert balance_page.get_form(conn, USER_ID, today, day)["message"] == message
+    assert balance_page.save(conn, USER_ID, today, day, 100000, 0) == message
+    assert queries.get_balance_log(conn, USER_ID, day) is None
+    assert queries.get_period(conn, USER_ID, day) is None
