@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>다시 짜기 - 지갑이</title>
+</head>
+<body>
+<h1>다시 짜기</h1>
+
+{% if not r.ready %}
+<p>먼저 설정이 필요해요.</p>
+{% elif r.short == 0 %}
+<p>모자라지 않아요</p>
+{% else %}
+<p><strong>{{ "{:,}".format(r.short) }}원 모자라요</strong></p>
+
+<h2>1. 반품하기</h2>
+{% if r.returnable %}
+<ul>
+  {% for it in r.returnable %}
+  <li>{{ it.name }} · {{ "{:,}".format(it.price) }}원 · {{ it.bought_date.month }}/{{ it.bought_date.day }}에 산 것
+    <form method="post" action="/cart/{{ it.item_id }}/return" style="display:inline">
+      <input type="hidden" name="back" value="replan">
+      {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+      <button type="submit">반품</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>반품할 수 있는 물건이 없어요 (산 날 빼고 7일 안)</p>
+{% endif %}
+
+<form method="post" action="/replan">
+  {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+
+  <h2>2. 약속 줄이기</h2>
+  {% if r.rows %}
+  <ul>
+    {% for row in r.rows %}
+    <li>
+      {{ row.appt.appt_date.month }}/{{ row.appt.appt_date.day }} {{ row.appt.title }} {{ "{:,}".format(row.appt.amount) }}원 →
+      <label>줄일 금액 <input type="number" name="cut_{{ row.appt.appt_id }}" min="0" max="{{ row.appt.amount }}" value="{{ row.cut }}">원</label>
+      <label><input type="checkbox" name="apply_{{ row.appt.appt_id }}" checked> 적용</label>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>줄일 약속이 없어요</p>
+  {% endif %}
+
+  <h2>3. 비상금</h2>
+  <p>비상금 {{ "{:,}".format(r.fund) }}원에서 {{ "{:,}".format(r.borrow) }}원을 빌려요. 다음 기간 첫날 다시 채워 놔요</p>
+  {% if r.left > 0 %}
+  <p>그래도 {{ "{:,}".format(r.left) }}원 모자라요 = 알바 약 {{ r.hours }}시간</p>
+  {% endif %}
+  <p>칸을 고치면 저장할 때 비상금에서 빌릴 돈을 다시 계산해요</p>
+
+  <p><button type="submit">이렇게 할게요</button></p>
+</form>
+{% endif %}
+
+<p><a href="/{% if today_q %}?today={{ today_q }}{% endif %}">홈으로</a></p>
+</body>
+</html>

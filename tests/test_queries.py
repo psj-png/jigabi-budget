@@ -566,3 +566,96 @@ def test_남의_물건은_사거나_반품할_수_없다(conn, clean_purchases):
         with conn.cursor() as cur:
             cur.execute("DELETE FROM users WHERE user_id = %s", (other,))
         conn.commit()
+
+
+# ---- 다시 짜기 (끝나면 seed 상태로 되돌린다) ----
+from app import replan
+
+
+@pytest.fixture
+def clean_replan(conn, clean_purchases):
+    yield
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM loans WHERE user_id = %s", (USER_ID,))
+        cur.execute("UPDATE users SET emergency_fund = 100000 WHERE user_id = %s", (USER_ID,))
+        cur.execute("UPDATE appointments SET amount = 30000 WHERE user_id = %s", (USER_ID,))
+    conn.commit()
+
+
+def buy_three(conn):
+    # 롱패딩·니트·목도리 267,000을 10/31에 산다
+    ids = item_ids(conn)
+    purchase.buy_now(conn, USER_ID, [ids["롱패딩"], ids["니트"], ids["목도리"]], date(2026, 10, 31))
+
+
+def test_다시_짜기(conn, clean_replan):
+    from app.home import make_home
+
+    today = date(2026, 10, 31)
+    buy_three(conn)
+    h = make_home(conn, USER_ID, today)
+    assert h["free"] == -42900
+
+    # 제안: 술자리 30,000 -> 10,000 줄이기, 비상금 32,900
+    r = replan.make_replan(conn, USER_ID, today)
+    assert r["short"] == 42900
+    assert [(x["appt"]["title"], x["cut"]) for x in r["rows"]] == [("동기 술자리", 10000)]
+    assert (r["borrow"], r["left"]) == (32900, 0)
+    appt_id = r["rows"][0]["appt"]["appt_id"]
+
+    # 저장하면 여유 돈 0, 하루 여유 0 텅텅, 약속 20,000, 비상금 67,100, loans 1행
+    assert replan.save_replan(conn, USER_ID, today, {appt_id: 10000}) is None
+    h = make_home(conn, USER_ID, today)
+    assert (h["free"], h["daily"], h["stage"]) == (0, 0, "텅텅")
+    assert queries.get_appointments(conn, USER_ID)[0]["amount"] == 20000
+    assert queries.get_user(conn, USER_ID)["emergency_fund"] == 67100
+    loans = queries.get_loans(conn, USER_ID)
+    assert [(l["borrowed_on"], l["amount"]) for l in loans] == [(today, 32900)]
+    # 이제 모자라지 않으니 다시 저장할 수 없다
+    assert replan.save_replan(conn, USER_ID, today, {appt_id: 1000}) == "모자라지 않아요"
+
+    # 그날 밤 '들어온 돈' 미리 채우기 32,900, 밤 잔액 47,000 -> 쓴 돈 3,100
+    assert balance_page.get_form(conn, USER_ID, today, today)["income_plan"] == 32900
+    assert balance_page.save(conn, USER_ID, today, today, 47000, 32900) is None
+    assert queries.get_balance_log(conn, USER_ID, today)["spent"] == 3100
+
+    # 11/25: 새 기간 시작 잔액 0, 갚을 돈 32,900, 비상금은 100,000으로 돌아옴
+    h = make_home(conn, USER_ID, date(2026, 11, 25))
+    per = queries.get_period(conn, USER_ID, date(2026, 11, 25))
+    assert (per["opening_balance"], per["repay_amount"]) == (0, 32900)
+    assert queries.get_user(conn, USER_ID)["emergency_fund"] == 100000
+    assert (h["free"], h["daily"], h["stage"]) == (357000, 11900, "빵빵")
+
+
+def test_다시_짜기_줄일_금액은_고친_대로_비상금을_다시_계산(conn, clean_replan):
+    today = date(2026, 10, 31)
+    buy_three(conn)
+    r = replan.make_replan(conn, USER_ID, today)
+    appt_id = r["rows"][0]["appt"]["appt_id"]
+    # 30,000을 다 줄이면 비상금에서는 12,900만 빌린다
+    assert replan.save_replan(conn, USER_ID, today, {appt_id: 30000}) is None
+    assert queries.get_user(conn, USER_ID)["emergency_fund"] == 87100
+    assert queries.get_loans(conn, USER_ID)[0]["amount"] == 12900
+
+
+def test_다시_짜기_범위_밖의_금액과_남의_약속은_막는다(conn, clean_replan):
+    today = date(2026, 10, 31)
+    buy_three(conn)
+    appt_id = replan.make_replan(conn, USER_ID, today)["rows"][0]["appt"]["appt_id"]
+    assert replan.save_replan(conn, USER_ID, today, {appt_id: 30001}) is not None   # 약속 금액 초과
+    assert replan.save_replan(conn, USER_ID, today, {appt_id: -1}) is not None      # 음수
+
+    other, _, _ = setup.create_account(conn, SEED_LIKE, date(2026, 10, 30))
+    try:
+        queries.insert_appointment(conn, other, date(2026, 11, 7), "남의 약속", 30000, 0)
+        other_appt = queries.get_appointments(conn, other)[0]["appt_id"]
+        assert replan.save_replan(conn, USER_ID, today, {other_appt: 10000}) == "줄일 수 없는 약속이에요"
+        assert queries.get_appointments(conn, other)[0]["amount"] == 30000
+    finally:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM users WHERE user_id = %s", (other,))
+        conn.commit()
+    # 아무것도 안 바뀌었다
+    assert queries.get_appointments(conn, USER_ID)[0]["amount"] == 30000
+    assert len(queries.get_loans(conn, USER_ID)) == 0
+    assert queries.get_user(conn, USER_ID)["emergency_fund"] == 100000

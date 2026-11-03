@@ -29,11 +29,14 @@ def _context(conn, user_id, day):
     incomes = queries.get_incomes(conn, user_id)
     fixed = queries.get_fixed_costs(conn, user_id)
     items = queries.get_items(conn, user_id)
+    loans = queries.get_loans(conn, user_id)
+    # 기간 첫날이 범위에 있으면 그날 갚은 돈(repay_amount)도 빠져나간 돈이다
+    repay = per["repay_amount"] if start == per["start_date"] else 0
     return {
         "prev_balance": prev_balance,
         "start": start,
-        "income_plan": calc.incomes_sum(start, day, incomes),
-        "fixed_out": calc.monthly_sum(start, day, fixed),
+        "income_plan": calc.incomes_sum(start, day, incomes) + calc.loans_sum(start, day, loans),
+        "fixed_out": calc.monthly_sum(start, day, fixed) + repay,
         "bought": calc.purchases_sum(start, day, items),  # 그 사이 산 값 - 반품한 값
     }
 

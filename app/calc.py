@@ -145,13 +145,14 @@ def today_budget(day, routines, appointments, daily):
     return min_living_on(day, routines) + daily + appointments_sum(day, day, appointments)
 
 
-def estimate_balance(balance, start, end, routines, fixed, appts, incomes, items=()):
-    # start~end 동안 수입은 더하고 고정지출·약속·최소 생활비·산 물건 값은 뺀 잔액
+def estimate_balance(balance, start, end, routines, fixed, appts, incomes, items=(), loans=()):
+    # start~end 동안 수입·빌린 돈은 더하고 고정지출·약속·최소 생활비·산 물건 값은 뺀 잔액
     # (안 적은 날은 최소 생활비와 약속만큼 썼다고 본다, R10). start > end면 그대로
     if start > end:
         return balance
     return (balance
             + incomes_sum(start, end, incomes)
+            + loans_sum(start, end, loans)
             - monthly_sum(start, end, fixed)
             - appointments_sum(start, end, appts)
             - min_living(start, end, routines)
@@ -234,6 +235,25 @@ def planned_sum(start, end, items):
     return sum(it["price"] for it in items
                if it["status"] == "planned" and it["planned_date"] is not None
                and start <= it["planned_date"] <= end)
+
+
+def loans_sum(start, end, loans):
+    # start~end에 비상금에서 빌린 돈 합. 빌린 날 수입처럼 들어온다
+    return sum(l["amount"] for l in loans if start <= l["borrowed_on"] <= end)
+
+
+def replan_proposal(short, appts, fund):
+    # R14 다시 짜기: 모자란 돈 short를 약속 줄이기 -> 비상금 순으로 메운다
+    # appts는 날짜순 약속 목록. 약속마다 금액의 1/3(천 원 아래 버림)을 제안하되 모자란 돈을 넘지 않게
+    # (약속별 줄일 금액 목록, 비상금에서 빌릴 돈, 그래도 남는 돈)을 돌려준다
+    left = max(short, 0)
+    cuts = []
+    for a in appts:
+        cut = min(a["amount"] // 3 // 1000 * 1000, left)
+        cuts.append(cut)
+        left -= cut
+    borrow = min(left, fund)
+    return cuts, borrow, left - borrow
 
 
 def can_return(bought_date, day):

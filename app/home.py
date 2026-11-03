@@ -24,11 +24,17 @@ def ensure_period(conn, user_id, day):
     fixed = queries.get_fixed_costs(conn, user_id)
     appts = queries.get_appointments(conn, user_id)
     items = queries.get_items(conn, user_id)
+    loans = queries.get_loans(conn, user_id)
     # 마지막 밤 잔액에서 시작일 전날까지 안 적은 날을 메운 값이 시작 잔액
     opening = calc.estimate_balance(
         before["balance"], before["log_date"] + timedelta(days=1),
-        new_start - timedelta(days=1), routines, fixed, appts, incomes, items)
-    queries.insert_period(conn, user_id, new_start, new_end, opening)
+        new_start - timedelta(days=1), routines, fixed, appts, incomes, items, loans)
+    # 앞 기간에 빌린 돈은 이 기간에 갚는다 (R14)
+    prev = queries.get_prev_period(conn, user_id, new_start)
+    repay = 0
+    if prev is not None:
+        repay = calc.loans_sum(prev["start_date"], new_start - timedelta(days=1), loans)
+    queries.insert_period(conn, user_id, new_start, new_end, opening, repay)
     return queries.get_period(conn, user_id, day)
 
 
@@ -78,12 +84,15 @@ def make_home(conn, user_id, today):
     fixed = queries.get_fixed_costs(conn, user_id)
     appts = queries.get_appointments(conn, user_id)
     items = queries.get_items(conn, user_id)
+    loans = queries.get_loans(conn, user_id)
 
     min_living = calc.min_living(first, end, routines)
-    incomes_sum = calc.incomes_sum(first, end, incomes)
+    # 비상금에서 빌린 돈은 빌린 날 수입처럼 더한다
+    incomes_sum = calc.incomes_sum(first, end, incomes) + calc.loans_sum(first, end, loans)
     fixed_sum = calc.monthly_sum(first, end, fixed)
     appt_sum = calc.appointments_sum(first, end, appts)
-    repay = per["repay_amount"]
+    # 갚는 돈은 기간 첫날 통장에서 나간다: 첫날 밤 잔액을 적은 뒤에는 잔액에 이미 빠져 있다
+    repay = per["repay_amount"] if first <= per["start_date"] else 0
     # 산 물건(반품 뺀 것)과 살 계획을 잡은 물건은 약속처럼 여유 돈에서 뺀다
     # 계획한 물건은 사거나 취소할 때까지 빼니까 지난 날짜도 센다 (date.min부터)
     items_out = calc.purchases_sum(first, today, items) + calc.planned_sum(date.min, end, items)

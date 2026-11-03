@@ -49,7 +49,7 @@ docs/   계산 규칙
 
 준비 중 (ERD 그림)
 
-테이블 9개: users, routines, routine_days, incomes, fixed_costs, appointments, wish_items, balance_logs, periods
+테이블 10개: users, routines, routine_days, incomes, fixed_costs, appointments, wish_items, balance_logs, periods, loans
 
 ## 계산 규칙
 

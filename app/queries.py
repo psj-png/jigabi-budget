@@ -97,14 +97,44 @@ def get_user(conn, user_id):
         return cur.fetchone()
 
 
-def insert_period(conn, user_id, start, end, opening_balance):
+def get_prev_period(conn, user_id, before):
+    # before보다 앞서 시작한 가장 가까운 기간. 없으면 None
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO periods (user_id, start_date, end_date, opening_balance) "
-            "VALUES (%s, %s, %s, %s)",
-            (user_id, start, end, opening_balance),
+            "SELECT start_date, end_date FROM periods "
+            "WHERE user_id = %s AND start_date < %s ORDER BY start_date DESC LIMIT 1",
+            (user_id, before),
         )
-    conn.commit()
+        return cur.fetchone()
+
+
+def insert_period(conn, user_id, start, end, opening_balance, repay_amount=0):
+    # 갚을 돈(repay_amount)은 비상금으로 돌려놓은 것으로 보고 같이 더한다
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO periods (user_id, start_date, end_date, opening_balance, repay_amount) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (user_id, start, end, opening_balance, repay_amount),
+            )
+            if repay_amount:
+                cur.execute(
+                    "UPDATE users SET emergency_fund = emergency_fund + %s WHERE user_id = %s",
+                    (repay_amount, user_id),
+                )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+
+
+def get_loans(conn, user_id):
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT loan_id, borrowed_on, amount FROM loans WHERE user_id = %s ORDER BY loan_id",
+            (user_id,),
+        )
+        return cur.fetchall()
 
 
 def save_balance_log(conn, user_id, log_date, balance, income_in, spent):
@@ -296,4 +326,29 @@ def adjust_balance_log(conn, user_id, log_date, delta):
         cur.execute(
             "UPDATE balance_logs SET balance = balance + %s WHERE user_id = %s AND log_date = %s",
             (delta, user_id, log_date),
+        )
+
+
+# 아래 세 함수도 commit을 하지 않는다. replan.py가 한 트랜잭션으로 묶어 commit한다
+def update_appointment_amount(conn, user_id, appt_id, amount):
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE appointments SET amount = %s WHERE appt_id = %s AND user_id = %s",
+            (amount, appt_id, user_id),
+        )
+
+
+def insert_loan(conn, user_id, borrowed_on, amount):
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO loans (user_id, borrowed_on, amount) VALUES (%s, %s, %s)",
+            (user_id, borrowed_on, amount),
+        )
+
+
+def add_emergency_fund(conn, user_id, delta):
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE users SET emergency_fund = emergency_fund + %s WHERE user_id = %s",
+            (delta, user_id),
         )

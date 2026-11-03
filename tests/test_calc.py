@@ -3,7 +3,7 @@ from datetime import date
 from app.calc import (appointments_sum, daily_margin, estimate_balance, first_day, free_money,
                       min_living, monthly_sum, incomes_sum, period, spent_money, stage,
                       today_budget, transport_default, max_fare, preview, work_hours,
-                      split_plan, purchases_sum, planned_sum, can_return)
+                      split_plan, purchases_sum, planned_sum, can_return, loans_sum, replan_proposal)
 
 
 def test_R1_예시_10월30일():
@@ -333,3 +333,30 @@ def test_반품은_산_날_빼고_7일_안():
     assert can_return(산날, date(2026, 10, 31))
     assert can_return(산날, date(2026, 11, 7))        # 7일째까지
     assert not can_return(산날, date(2026, 11, 8))    # 8일째
+
+
+def test_loans_sum():
+    loans = [{"borrowed_on": date(2026, 10, 31), "amount": 32900},
+             {"borrowed_on": date(2026, 11, 10), "amount": 5000}]
+    assert loans_sum(date(2026, 10, 31), date(2026, 11, 24), loans) == 37900
+    assert loans_sum(date(2026, 11, 1), date(2026, 11, 24), loans) == 5000
+    assert loans_sum(date(2026, 11, 25), date(2026, 12, 24), loans) == 0
+
+
+def test_R14_다시_짜기_제안():
+    술자리 = [{"amount": 30000}]
+    # 모자란 돈 37,100: 술자리 1/3 = 10,000 줄이고 비상금에서 27,100
+    assert replan_proposal(37100, 술자리, 100000) == ([10000], 27100, 0)
+    # 그 뒤 다음 기간 하루 여유: (389,900 - 27,100) / 30 = 12,000 (rules.md 예시)
+    assert daily_margin(389900 - 27100, 30) == 12000
+    # 비상금이 20,000이면 20,000만 빌리고 7,100이 남는다 = 알바 1시간
+    cuts, borrow, left = replan_proposal(37100, 술자리, 20000)
+    assert (cuts, borrow, left) == ([10000], 20000, 7100)
+    assert work_hours(left, 10320) == 1
+    # 모자란 돈이 5,000이면 줄이기 제안도 5,000까지만
+    assert replan_proposal(5000, 술자리, 100000) == ([5000], 0, 0)
+    # 약속은 날짜순으로 채우고, 1/3은 천 원 아래 버림 (20,000 -> 6,000)
+    assert replan_proposal(12000, [{"amount": 30000}, {"amount": 20000}], 0) == ([10000, 2000], 0, 0)
+    assert replan_proposal(30000, [{"amount": 20000}], 0) == ([6000], 0, 24000)
+    # 모자라지 않으면 아무것도 안 한다
+    assert replan_proposal(0, 술자리, 100000) == ([0], 0, 0)

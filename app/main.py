@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app import balance as balance_page
-from app import calc, cart, purchase, queries, setup, split
+from app import calc, cart, purchase, queries, replan, setup, split
 from app.db import get_conn
 from app.home import make_home
 
@@ -349,13 +349,18 @@ def cart_buy(request: Request, item: list[int] = Form(default=[]), today: str = 
     conn = get_conn()
     try:
         purchase.buy_now(conn, user_id, item, now)
+        h = make_home(conn, user_id, now)
     finally:
         conn.close()
-    return RedirectResponse("/" + (f"?today={today}" if today else ""), status_code=303)
+    q = f"?today={today}" if today else ""
+    # 산 뒤 여유 돈이 0 미만이면 다시 짜기로 (R14)
+    if h["ready"] and h["free"] < 0:
+        return RedirectResponse("/replan" + q, status_code=303)
+    return RedirectResponse("/" + q, status_code=303)
 
 
 @app.post("/cart/{item_id}/return")
-def cart_return(request: Request, item_id: int, today: str = Form(None)):
+def cart_return(request: Request, item_id: int, today: str = Form(None), back: str = Form(None)):
     user_id = current_user(request)
     if user_id is None:
         return to_start()
@@ -368,7 +373,9 @@ def cart_return(request: Request, item_id: int, today: str = Form(None)):
         conn.close()
     if not done:
         raise HTTPException(status_code=400, detail="반품할 수 없어요 (산 날 빼고 7일 안, 산 것만)")
-    return RedirectResponse("/cart" + (f"?today={today}" if today else ""), status_code=303)
+    # 다시 짜기 화면에서 반품했으면 그 화면으로 돌아간다
+    page = "/replan" if back == "replan" else "/cart"
+    return RedirectResponse(page + (f"?today={today}" if today else ""), status_code=303)
 
 
 @app.post("/cart/{item_id}/unplan")
@@ -385,6 +392,50 @@ def cart_unplan(request: Request, item_id: int, today: str = Form(None)):
     if not done:
         raise HTTPException(status_code=400, detail="취소할 계획이 없어요")
     return RedirectResponse("/cart" + (f"?today={today}" if today else ""), status_code=303)
+
+
+@app.get("/replan")
+def replan_get(request: Request, today: str = None):
+    user_id = current_user(request)
+    if user_id is None:
+        return to_start()
+    now = parse_date(today, date.today())
+
+    conn = get_conn()
+    try:
+        data = replan.make_replan(conn, user_id, now)
+    finally:
+        conn.close()
+    return templates.TemplateResponse(request, "replan.html", {"r": data, "today_q": today})
+
+
+@app.post("/replan")
+async def replan_post(request: Request):
+    user_id = current_user(request)
+    if user_id is None:
+        return to_start()
+    form = await request.form()
+    today = form.get("today") or None
+    now = parse_date(today, date.today())
+
+    # cut_<약속 id> 칸 중 '적용'을 체크한 것만 모은다
+    cuts = {}
+    for key in form.keys():
+        if not key.startswith("cut_") or form.get("apply_" + key[4:]) is None:
+            continue
+        try:
+            cuts[int(key[4:])] = int(form.get(key))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="줄일 금액은 숫자여야 해요")
+
+    conn = get_conn()
+    try:
+        error = replan.save_replan(conn, user_id, now, cuts)
+    finally:
+        conn.close()
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    return RedirectResponse("/" + (f"?today={today}" if today else ""), status_code=303)
 
 
 @app.post("/split/save")

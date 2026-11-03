@@ -4,6 +4,7 @@ CREATE DATABASE IF NOT EXISTS jigabi DEFAULT CHARACTER SET utf8mb4;
 USE jigabi;
 
 -- 처음부터 다시 만들 때
+DROP TABLE IF EXISTS loans;
 DROP TABLE IF EXISTS periods;
 DROP TABLE IF EXISTS balance_logs;
 DROP TABLE IF EXISTS wish_items;
@@ -108,5 +109,14 @@ CREATE TABLE periods (
     end_date DATE NOT NULL,
     opening_balance INT NOT NULL,
     repay_amount INT NOT NULL DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- 비상금에서 빌린 돈 (R14). 다음 기간 첫날 periods.repay_amount로 갚는다
+CREATE TABLE loans (
+    loan_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    borrowed_on DATE NOT NULL,
+    amount INT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
