@@ -16,6 +16,10 @@
 <p>{{ h.missed_days }}일 동안 밤 잔액을 안 적었어요. 그동안 최소 생활비만큼 썼다고 보고 계산했어요</p>
 {% endif %}
 
+{% for name in h.due_items %}
+<p>사기로 한 날이에요: {{ name }} (<a href="/cart{% if today_q %}?today={{ today_q }}{% endif %}">장바구니</a>에서 [살게요])</p>
+{% endfor %}
+
 {% if h.daily is none %}
 <p>이번 기간 끝</p>
 {% else %}

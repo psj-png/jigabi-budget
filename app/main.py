@@ -371,6 +371,22 @@ def cart_return(request: Request, item_id: int, today: str = Form(None)):
     return RedirectResponse("/cart" + (f"?today={today}" if today else ""), status_code=303)
 
 
+@app.post("/cart/{item_id}/unplan")
+def cart_unplan(request: Request, item_id: int, today: str = Form(None)):
+    user_id = current_user(request)
+    if user_id is None:
+        return to_start()
+
+    conn = get_conn()
+    try:
+        done = purchase.unplan_item(conn, user_id, item_id)
+    finally:
+        conn.close()
+    if not done:
+        raise HTTPException(status_code=400, detail="취소할 계획이 없어요")
+    return RedirectResponse("/cart" + (f"?today={today}" if today else ""), status_code=303)
+
+
 @app.post("/split/save")
 def split_save(request: Request, item: list[int] = Form(default=[]), today: str = Form(None)):
     user_id = current_user(request)

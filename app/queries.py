@@ -270,6 +270,16 @@ def plan_item(conn, user_id, item_id, planned_date):
         return cur.rowcount
 
 
+def unplan_item(conn, user_id, item_id):
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE wish_items SET status = 'wish', planned_date = NULL "
+            "WHERE item_id = %s AND user_id = %s AND status = 'planned'",
+            (item_id, user_id),
+        )
+        return cur.rowcount
+
+
 def return_item(conn, user_id, item_id, day):
     with conn.cursor() as cur:
         cur.execute(

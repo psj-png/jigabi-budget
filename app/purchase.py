@@ -38,6 +38,17 @@ def return_item(conn, user_id, item_id, day):
     return bool(done)
 
 
+def unplan_item(conn, user_id, item_id):
+    # 계획 취소: 다시 사고 싶은 것(wish)으로. 계획한 물건이 아니면 False
+    try:
+        done = queries.unplan_item(conn, user_id, item_id)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    return bool(done)
+
+
 def save_split(conn, user_id, today, selected):
     # 나눠 사기 계획을 서버에서 다시 계산해 저장한다: '지금' 칸은 산 것, 나머지는 그 기간 시작일로 계획
     s = split.make_split(conn, user_id, today, selected)

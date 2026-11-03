@@ -1,5 +1,5 @@
 # 홈 화면에 보여줄 값을 모은다: DB에서 읽고(queries) calc로 계산한다
-from datetime import timedelta
+from datetime import date, timedelta
 
 from app import calc, queries
 
@@ -85,9 +85,15 @@ def make_home(conn, user_id, today):
     appt_sum = calc.appointments_sum(first, end, appts)
     repay = per["repay_amount"]
     # 산 물건(반품 뺀 것)과 살 계획을 잡은 물건은 약속처럼 여유 돈에서 뺀다
-    items_out = calc.purchases_sum(first, today, items) + calc.planned_sum(first, end, items)
+    # 계획한 물건은 사거나 취소할 때까지 빼니까 지난 날짜도 센다 (date.min부터)
+    items_out = calc.purchases_sum(first, today, items) + calc.planned_sum(date.min, end, items)
     free = calc.free_money(balance, incomes_sum, fixed_sum, appt_sum, min_living, repay, items_out)
     daily = calc.daily_margin(free, days_left)
+
+    # 사기로 한 날이 오늘이거나 지났는데 아직 안 산 물건
+    due_items = [it["name"] for it in items
+                 if it["status"] == "planned" and it["planned_date"] is not None
+                 and it["planned_date"] <= today]
 
     home = {
         "ready": True,
@@ -107,6 +113,7 @@ def make_home(conn, user_id, today):
         "budget": None,
         "logged": logged,
         "missed_days": missed_days,
+        "due_items": due_items,
     }
     if daily is not None:
         home["stage"] = calc.stage(daily, user["comfort_daily"])

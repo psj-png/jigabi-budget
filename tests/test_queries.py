@@ -510,6 +510,34 @@ def test_나눠_사기_저장(conn, clean_purchases):
     assert "롱패딩" not in item_ids(conn)
 
 
+def test_계획한_물건은_날짜가_지나도_사거나_취소할_때까지_뺀다(conn, clean_purchases):
+    from app.home import make_home
+
+    ids = item_ids(conn)
+    롱패딩 = ids["롱패딩"]
+    purchase.save_split(conn, USER_ID, date(2026, 10, 31), list(ids.values()))
+    make_home(conn, USER_ID, date(2026, 11, 25))  # 새 기간 만들기
+
+    # g) 11/26 밤 잔액 416,900 = 27,100 + 알바비 420,000 - 학교 15,100 x 2
+    assert balance_page.save(conn, USER_ID, date(2026, 11, 26), date(2026, 11, 26), 416900, 0) is None
+
+    # 11/27: count_from이 11/26 뒤로 넘어가도 안 산 롱패딩 189,000은 계속 뺀다
+    h = make_home(conn, USER_ID, date(2026, 11, 27))
+    assert (h["free"], h["daily"], h["stage"], h["days_left"]) == (228000, 8100, "든든", 28)
+    assert h["due_items"] == ["롱패딩"]  # 사기로 한 날(11/25)이 지났다
+
+    # [계획 취소]: 다시 wish, 여유 돈 417,000
+    assert purchase.unplan_item(conn, USER_ID, 롱패딩) is True
+    it = [i for i in queries.get_items(conn, USER_ID) if i["item_id"] == 롱패딩][0]
+    assert (it["status"], it["planned_date"]) == ("wish", None)
+    h = make_home(conn, USER_ID, date(2026, 11, 27))
+    assert h["free"] == 417000 and h["due_items"] == []
+
+    # 11/27에 롱패딩을 사면 다시 228,000
+    purchase.buy_now(conn, USER_ID, [롱패딩], date(2026, 11, 27))
+    assert make_home(conn, USER_ID, date(2026, 11, 27))["free"] == 228000
+
+
 def test_반품은_산_날_빼고_7일_안(conn, clean_purchases):
     ids = item_ids(conn)
     purchase.buy_now(conn, USER_ID, [ids["니트"]], date(2026, 10, 31))

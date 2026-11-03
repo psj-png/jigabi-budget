@@ -55,7 +55,12 @@
 <h2>살 계획</h2>
 <ul>
   {% for it in c.planned %}
-  <li>{{ it.name }} · {{ "{:,}".format(it.price) }}원 · {{ it.planned_date.month }}/{{ it.planned_date.day }}에 사기로 함</li>
+  <li>{{ it.name }} · {{ "{:,}".format(it.price) }}원 · {{ it.planned_date.month }}/{{ it.planned_date.day }}에 사기로 함
+    <form method="post" action="/cart/{{ it.item_id }}/unplan" style="display:inline">
+      {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+      <button type="submit">계획 취소</button>
+    </form>
+  </li>
   {% endfor %}
 </ul>
 {% endif %}
