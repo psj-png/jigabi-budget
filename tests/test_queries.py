@@ -674,3 +674,23 @@ def test_나눠_사기는_이번_기간에_빌린_돈을_다음_기간에서_뺀
     assert [it[0] for it in plan[1]["items"]] == ["부츠"]
     assert plan[1]["free"] == 389900 - 32900   # 다음 기간 여유 돈 (갚을 돈을 뺌, 부츠 값은 아직)
     assert (plan[1]["daily"], plan[1]["stage"]) == (7900, "든든")   # (389,900 − 32,900 − 119,000) ÷ 30
+
+
+def test_홈에_모자라면_다시_짜기_링크가_보인다(conn, clean_replan):
+    from jinja2 import Environment, FileSystemLoader
+    from app.home import make_home
+
+    home_html = Environment(loader=FileSystemLoader("app/templates")).get_template("home.html")
+    today = date(2026, 10, 31)
+
+    # 세 개를 샀지만 다시 짜기를 안 했다: 42,900원 모자라요 + 링크
+    buy_three(conn)
+    html = home_html.render(h=make_home(conn, USER_ID, today), today_q="2026-10-31")
+    assert "최소 생활비가 42,900원 모자라요" in html
+    assert 'href="/replan?today=2026-10-31"' in html
+
+    # 다시 짜기를 저장하면 여유 돈 0: 링크가 안 보인다
+    appt_id = replan.make_replan(conn, USER_ID, today)["rows"][0]["appt"]["appt_id"]
+    assert replan.save_replan(conn, USER_ID, today, {appt_id: 10000}) is None
+    html = home_html.render(h=make_home(conn, USER_ID, today), today_q="2026-10-31")
+    assert "모자라요" not in html

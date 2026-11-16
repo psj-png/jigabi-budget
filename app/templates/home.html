@@ -30,6 +30,9 @@
 {% endif %}
 {% endif %}
 <p>여유 돈: {{ "{:,}".format(h.free) }}원</p>
+{% if h.free < 0 %}
+<p>최소 생활비가 {{ "{:,}".format(-h.free) }}원 모자라요 → <a href="/replan{% if today_q %}?today={{ today_q }}{% endif %}">다시 짜기</a></p>
+{% endif %}
 
 <h2>여유 돈이 나온 과정</h2>
 <ul>
