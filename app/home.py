@@ -4,6 +4,16 @@ from datetime import date, timedelta
 from app import calc, queries
 
 
+# 지갑이 단계별 한마디
+STAGE_LINES = {
+    "빵빵": "오늘은 좀 써도 돼요",
+    "든든": "이대로면 괜찮아요",
+    "홀쭉": "조금씩 아껴볼까요?",
+    "텅텅": "최소 생활비만 남았어요",
+    "나방": "다시 짜보자…",
+}
+
+
 def ensure_period(conn, user_id, day):
     # day를 덮는 기간을 돌려준다. 없으면 지금 만든다 (R1-2)
     # 그 전 기록이 아예 없어서 못 만들면 None
@@ -123,10 +133,17 @@ def make_home(conn, user_id, today):
         "logged": logged,
         "missed_days": missed_days,
         "due_items": due_items,
+        "today_min": None,
+        "today_appt": None,
+        "stage_line": None,
     }
     if daily is not None:
         home["stage"] = calc.stage(daily, user["comfort_daily"])
         # 밤 잔액을 적었으면 내일 날짜로 R7을 계산한다
         budget_day = today + timedelta(days=1) if logged else today
         home["budget"] = calc.today_budget(budget_day, routines, appts, daily)
+        # 오늘 쓸 수 있는 돈 카드에 보여줄 그날 최소 생활비 (카드와 같은 날)
+        home["today_min"] = calc.min_living_on(budget_day, routines)
+        home["today_appt"] = calc.appointments_sum(budget_day, budget_day, appts)
+        home["stage_line"] = STAGE_LINES[home["stage"]]
     return home

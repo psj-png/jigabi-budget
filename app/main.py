@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app import balance as balance_page
@@ -11,6 +12,7 @@ from app.home import make_home
 
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 COOKIE_NAME = "jigabi_id"
 # db/seed.sql 예시 사람의 public_id

@@ -1,52 +1,97 @@
-<!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>지갑이</title>
-</head>
-<body>
-<h1>지갑이</h1>
+{% extends "base.html" %}
+{% from "_wallet.html" import wallet %}
+{% set active_tab = "home" %}
+
+{% block content %}
+{% set q = ("?today=" ~ today_q) if today_q else "" %}
 {% if not h.ready %}
-<p>기간 정보가 없어요. 먼저 설정이 필요해요.</p>
+<div class="card">
+  <p>기간 정보가 없어요. 먼저 설정이 필요해요.</p>
+</div>
 {% else %}
-<p>{{ h.today }} 기준 · 남은 날 {{ h.days_left }}일 (기간 끝 {{ h.end }})</p>
 
+{# a) 헤더 #}
+<header class="page-title">
+  <h1>{{ h.today.month }}월 {{ h.today.day }}일 ({{ ["월", "화", "수", "목", "금", "토", "일"][h.today.weekday()] }})</h1>
+  <p>남은 {{ h.days_left }}일 · 기간 끝 {{ h.end.month }}/{{ h.end.day }}</p>
+</header>
+
+{# b) 경고 줄 #}
 {% if h.missed_days > 0 %}
-<p>{{ h.missed_days }}일 동안 밤 잔액을 안 적었어요. 그동안 최소 생활비만큼 썼다고 보고 계산했어요</p>
+<div class="warn">{{ h.missed_days }}일 동안 밤 잔액을 안 적었어요. 그동안 최소 생활비만큼 썼다고 보고 계산했어요</div>
 {% endif %}
-
 {% for name in h.due_items %}
-<p>사기로 한 날이에요: {{ name }} (<a href="/cart{% if today_q %}?today={{ today_q }}{% endif %}">장바구니</a>에서 [살게요])</p>
+<div class="warn">사기로 한 날이에요: {{ name }} (<a href="/cart{{ q }}">장바구니</a>에서 [살게요])</div>
 {% endfor %}
-
-{% if h.daily is none %}
-<p>이번 기간 끝</p>
-{% else %}
-<p>지갑이 단계: <strong>{{ h.stage }}</strong></p>
-<p>하루 여유: {{ "{:,}".format(h.daily) }}원</p>
-{% if h.budget is not none %}
-<p>{% if h.logged %}내일{% else %}오늘{% endif %} 쓸 수 있는 돈: {{ "{:,}".format(h.budget) }}원</p>
-{% endif %}
-{% endif %}
-<p>여유 돈: {{ "{:,}".format(h.free) }}원</p>
 {% if h.free < 0 %}
-<p>최소 생활비가 {{ "{:,}".format(-h.free) }}원 모자라요 → <a href="/replan{% if today_q %}?today={{ today_q }}{% endif %}">다시 짜기</a></p>
+<div class="warn">최소 생활비가 {{ "{:,}".format(-h.free) }}원 모자라요 → <a href="/replan{{ q }}">다시 짜기</a></div>
 {% endif %}
 
-<h2>여유 돈이 나온 과정</h2>
-<ul>
-  <li>쓸 수 있는 돈 {{ "{:,}".format(h.available) }}원</li>
-  <li>− 고정지출 {{ "{:,}".format(h.fixed) }}원</li>
-  <li>− 약속 {{ "{:,}".format(h.appt) }}원</li>
-  <li>− 최소 생활비 {{ "{:,}".format(h.min_living) }}원</li>
-  <li>− 비상금 상환 {{ "{:,}".format(h.repay) }}원</li>
-  {% if h.items_out != 0 %}<li>− 산 것·살 계획 {{ "{:,}".format(h.items_out) }}원</li>{% endif %}
-  <li>= 여유 돈 {{ "{:,}".format(h.free) }}원</li>
-</ul>
+{# c) 지갑이 카드 #}
+<section class="card wallet-card">
+  {% if h.daily is none %}
+  <div class="wallet-text">
+    <p class="stage-line">이번 기간 끝</p>
+    <p class="daily">새 기간에 다시 봐요</p>
+  </div>
+  {% else %}
+  {{ wallet(h.stage, 92) }}
+  <div class="wallet-text">
+    <span class="stage-chip stage-{{ h.stage }}">{{ h.stage }}</span>
+    <p class="stage-line">{{ h.stage_line }}</p>
+    <p class="daily">하루 여유 <b>{{ "{:,}".format(h.daily) }}원</b></p>
+  </div>
+  {% endif %}
+</section>
+
+{# d) 오늘(또는 내일) 쓸 수 있는 돈 #}
+{% if h.budget is not none %}
+<section class="card">
+  <div class="label">{% if h.logged %}내일{% else %}오늘{% endif %} 쓸 수 있는 돈</div>
+  <div class="big-money">{{ "{:,}".format(h.budget) }}원</div>
+  <div class="chips">
+    <span class="chip">최소 생활비 {{ "{:,}".format(h.today_min) }}원</span>
+    {% if h.today_appt %}<span class="chip chip-appt">약속 {{ "{:,}".format(h.today_appt) }}원</span>{% endif %}
+    <span class="chip chip-blue">자유롭게 {{ "{:,}".format(h.daily) }}원</span>
+  </div>
+</section>
 {% endif %}
-<p><a href="/balance{% if today_q %}?today={{ today_q }}{% endif %}">밤 잔액 적기</a></p>
-<p><a href="/appointments{% if today_q %}?today={{ today_q }}{% endif %}">약속</a></p>
-<p><a href="/cart{% if today_q %}?today={{ today_q }}{% endif %}">장바구니</a></p>
-</body>
-</html>
+
+{# e) 이번 기간 #}
+{% set parts = [
+  ("고정지출", h.fixed, "#CBD5E1"),
+  ("약속", h.appt, "#A5B4FC"),
+  ("최소 생활비", h.min_living, "#93C5FD"),
+  ("여유 돈", h.free, "#2563EB"),
+] %}
+{% if h.items_out != 0 %}{% set parts = parts + [("산 것·살 계획", h.items_out, "#94A3B8")] %}{% endif %}
+{% if h.repay != 0 %}{% set parts = parts + [("비상금 상환", h.repay, "#64748B")] %}{% endif %}
+<section class="card">
+  <div class="period-head">
+    <b>남은 기간 {{ "{:,}".format(h.available) }}원</b>
+    <span class="small">{{ h.today.month }}/{{ h.today.day }}~{{ h.end.month }}/{{ h.end.day }} · {{ h.days_left }}일</span>
+  </div>
+  <div class="bar" aria-hidden="true">
+    {% for name, value, color in parts %}
+    {% if h.available > 0 and value > 0 %}<span style="width: {{ (value * 100 / h.available)|round(1) }}%; background: {{ color }}"></span>{% endif %}
+    {% endfor %}
+  </div>
+  <ul class="grid2">
+    {% for name, value, color in parts %}
+    <li><span class="dot" style="background: {{ color }}"></span>{{ name }}<b>{{ "{:,}".format(value) }}원</b></li>
+    {% endfor %}
+  </ul>
+  <p class="note">사고 싶은 건 '여유 돈'에서만 나가요.</p>
+</section>
+
+{# f) 장바구니 안내 #}
+<section class="card card-blue">
+  <h2>사고 싶은 게 있나요?</h2>
+  <p>사기 전에 지갑이가 얼마나 홀쭉해지는지 미리 봐요.</p>
+  <a class="btn" href="/cart{{ q }}">장바구니 미리보기</a>
+</section>
+
+{# g) 밤 잔액 #}
+<a class="btn btn-sub" href="/balance{{ q }}">오늘 밤 잔액 적기</a>
+{% endif %}
+{% endblock %}
