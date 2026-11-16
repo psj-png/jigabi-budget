@@ -26,8 +26,15 @@ def make_replan(conn, user_id, today):
     returnable = [i for i in items if i["status"] == "bought" and calc.can_return(i["bought_date"], today)]
     rows = [{"appt": a, "cut": c} for a, c in zip(appts, cuts)]
     hours = calc.work_hours(left, user["hourly_wage"]) if left > 0 else None
+    # 화면용: 지금 단계, 남은 날, 갚기 시작하는 날, 제안대로 메운 뒤의 단계 (새 규칙 없이 calc 그대로)
+    after_stage = None
+    if h["days_left"] > 0:
+        after_free = h["free"] + sum(cuts) + borrow
+        after_stage = calc.stage(calc.daily_margin(after_free, h["days_left"]), user["comfort_daily"])
     return {"ready": True, "short": short, "returnable": returnable, "rows": rows,
-            "fund": user["emergency_fund"], "borrow": borrow, "left": left, "hours": hours}
+            "fund": user["emergency_fund"], "borrow": borrow, "left": left, "hours": hours,
+            "stage": h["stage"], "days_left": h["days_left"], "next_start": h["end"] + timedelta(days=1),
+            "after_stage": after_stage}
 
 
 def save_replan(conn, user_id, today, cuts):

@@ -439,7 +439,7 @@ def replan_get(request: Request, today: str = None):
         data = replan.make_replan(conn, user_id, now)
     finally:
         conn.close()
-    return templates.TemplateResponse(request, "replan.html", {"r": data, "today_q": today})
+    return templates.TemplateResponse(request, "replan.html", {"r": data, "today_q": today, "now": now})
 
 
 @app.post("/replan")

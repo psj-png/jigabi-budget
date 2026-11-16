@@ -227,6 +227,41 @@ a { color: var(--blue-dark); }
 .look-row .arrow { color: var(--muted); font-weight: 700; }
 .look-row .jua { font-size: 16px; }
 
+/* 하단 메뉴가 없는 화면 */
+.app.no-nav { padding-bottom: 32px; }
+
+/* 다시 짜기 */
+.fix-card { display: flex; gap: 12px; padding: 14px; border-radius: 16px; background: #FDE2E4; margin-bottom: 12px; }
+.fix-card.col { display: block; }
+.fix-card b { color: #9F1239; font-size: 17px; }
+.fix-card p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.step { display: flex; gap: 12px; }
+.num { flex: none; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #F1F4F8; font-size: 13px; font-weight: 700; }
+.step-main { flex: 1; min-width: 0; }
+.step-main h3 { margin: 0 0 2px; font-size: 16px; }
+.step-main p { margin: 0 0 6px; font-size: 13px; color: var(--muted); }
+.cut-row { padding: 8px 0; border-top: 1px solid var(--line); }
+.cut-row .money-input { min-height: 44px; }
+.cut-row .money-input input { font-size: 16px; }
+.after-card { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; background: #FFE8D9; margin-bottom: 12px; }
+.after-card p { margin: 0; }
+.after-card .jua { font-size: 17px; }
+.reflect { display: flex; align-items: center; gap: 12px; }
+.reflect p { margin: 4px 0 0; }
+
+/* 시작 화면 */
+body.start-page { background: #EEF4FF; }
+.start-brand { margin: 8px 0 16px; text-align: center; font-size: 14px; font-weight: 700; color: var(--blue-dark); }
+.bubble { position: relative; margin: 0 8px 20px; padding: 16px; border-radius: 18px; background: #FFFFFF; text-align: center; font-family: 'Jua', 'Noto Sans KR', sans-serif; font-size: 18px; line-height: 1.5; }
+.bubble::after { content: ""; position: absolute; left: 50%; bottom: -10px; margin-left: -10px; border: 10px solid transparent; border-bottom: 0; border-top-color: #FFFFFF; }
+.start-char { display: flex; justify-content: center; margin-bottom: 8px; }
+.start-h1 { margin: 8px 0 16px; text-align: center; font-size: 20px; line-height: 1.5; }
+.start-list { list-style: none; margin: 0 0 16px; padding: 0; }
+.start-list li { display: flex; gap: 12px; align-items: flex-start; padding: 6px 0; }
+.start-list .num { background: #EAF1FF; color: #1D4ED8; }
+.start-note { margin: 12px 0 4px; text-align: center; font-size: 12px; color: var(--muted); }
+.start-demo { display: block; text-align: center; font-size: 13px; padding: 10px 0; }
+
 /* 하단 메뉴 */
 .tabbar {
   position: fixed;

@@ -1,24 +1,27 @@
-<!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>지갑이</title>
-</head>
-<body>
-<h1>지갑이</h1>
-<p>대학생 지갑은 늘 가볍지… 그래도 같이 버텨보자!</p>
-<p>사기 전에 이번 달을 미리 보고, 산 뒤엔 남은 날을 다시 짜요</p>
+{% extends "base.html" %}
+{% from "_wallet.html" import wallet %}
+{% set no_nav = true %}
+{% set body_class = "start-page" %}
+{% block nav %}{% endblock %}
 
-<ul>
-  <li>사고 싶은 걸 담으면 지갑이가 얼마나 홀쭉해지는지 보여줘요</li>
-  <li>밥값·교통비 같은 최소 생활비는 끝까지 지켜요</li>
-  <li>하루 한 번, 잔액만 알려주면 돼요</li>
-</ul>
+{% block content %}
+{% set q = ("?today=" ~ today_q) if today_q else "" %}
+<p class="start-brand">지갑이</p>
 
-<p><a href="/setup{% if today_q %}?today={{ today_q }}{% endif %}"><strong>시작하기</strong></a></p>
-<p>로그인 없이 시작해요 · 다른 기기에선 복구 코드로 이어 써요</p>
+<div class="bubble">대학생 지갑은 늘 가볍지… 그래도 같이 버텨보자!</div>
+<div class="start-char">{{ wallet("든든", 150) }}</div>
 
-<p><a href="/demo{% if today_q %}?today={{ today_q }}{% endif %}">예시 사람으로 둘러보기</a></p>
-</body>
-</html>
+<h1 class="start-h1">사기 전에 이번 달을 미리 보고,<br>산 뒤엔 남은 날을 다시 짜요</h1>
+
+<section class="card">
+  <ul class="start-list">
+    <li><span class="num">1</span><span>사고 싶은 걸 담으면 지갑이가 얼마나 홀쭉해지는지 보여줘요</span></li>
+    <li><span class="num">2</span><span>밥값·교통비 같은 최소 생활비는 끝까지 지켜요</span></li>
+    <li><span class="num">3</span><span>하루 한 번, 잔액만 알려주면 돼요</span></li>
+  </ul>
+</section>
+
+<a class="btn" href="/setup{{ q }}">시작하기</a>
+<p class="start-note">로그인 없이 시작해요 · 다른 기기에선 복구 코드로 이어 써요</p>
+<a class="start-demo" href="/demo{{ q }}">예시 사람으로 둘러보기</a>
+{% endblock %}
