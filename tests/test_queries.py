@@ -659,3 +659,18 @@ def test_다시_짜기_범위_밖의_금액과_남의_약속은_막는다(conn, 
     assert queries.get_appointments(conn, USER_ID)[0]["amount"] == 30000
     assert len(queries.get_loans(conn, USER_ID)) == 0
     assert queries.get_user(conn, USER_ID)["emergency_fund"] == 100000
+
+
+def test_나눠_사기는_이번_기간에_빌린_돈을_다음_기간에서_뺀다(conn, clean_replan):
+    today = date(2026, 10, 31)
+    buy_three(conn)
+    appt_id = replan.make_replan(conn, USER_ID, today)["rows"][0]["appt"]["appt_id"]
+    assert replan.save_replan(conn, USER_ID, today, {appt_id: 10000}) is None  # 비상금 32,900
+
+    # 부츠 하나: 이번 기간은 안 되고 다음 기간에 하루 여유 7,900 든든
+    boots = item_ids(conn)["부츠"]
+    plan = split.make_split(conn, USER_ID, today, [boots])["plan"]
+    assert plan[0]["items"] == []
+    assert [it[0] for it in plan[1]["items"]] == ["부츠"]
+    assert plan[1]["free"] == 389900 - 32900   # 다음 기간 여유 돈 (갚을 돈을 뺌, 부츠 값은 아직)
+    assert (plan[1]["daily"], plan[1]["stage"]) == (7900, "든든")   # (389,900 − 32,900 − 119,000) ÷ 30

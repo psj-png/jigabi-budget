@@ -45,12 +45,16 @@ def make_split(conn, user_id, today, selected):
     fixed = queries.get_fixed_costs(conn, user_id)
     appts = queries.get_appointments(conn, user_id)
     all_items = queries.get_items(conn, user_id)
+    loans = queries.get_loans(conn, user_id)
+    # 이번 기간에 빌린 돈은 다음 기간 첫날 갚는다 (R14)
+    this_start = queries.get_period(conn, user_id, today)["start_date"]
+    repay = calc.loans_sum(this_start, h["end"], loans)
 
     # 이번 기간은 지금 여유 돈, 다음·그다음은 이번에서 남는 돈을 0으로 보고 계산
     periods = [(today, h["free"], h["days_left"])]
     spans = [(today, h["end"])]
     start = h["end"] + timedelta(days=1)
-    for _ in range(2):
+    for n in range(2):
         p_start, p_end, days = calc.period(start, main["day_of_month"])
         free = calc.free_money(
             0,
@@ -58,7 +62,7 @@ def make_split(conn, user_id, today, selected):
             calc.monthly_sum(p_start, p_end, fixed),
             calc.appointments_sum(p_start, p_end, appts),
             calc.min_living(p_start, p_end, routines),
-            0,
+            repay if n == 0 else 0,  # 갚는 건 다음 기간만
             calc.planned_sum(p_start, p_end, all_items),  # 이미 살 계획을 잡은 물건
         )
         periods.append((p_start, free, days))
