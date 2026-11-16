@@ -153,8 +153,9 @@ def first_period(data, today):
 def summary(data, today):
     # 2단계 맨 위: 이번 기간 쓸 수 있는 돈 = 잔액 + 기간 안 수입 (R2)
     start, end = first_period(data, today)
-    return {"start": start, "end": end,
-            "available": data["balance"] + calc.incomes_sum(start, end, data["incomes"])}
+    income = calc.incomes_sum(start, end, data["incomes"])
+    return {"start": start, "end": end, "balance": data["balance"], "income": income,
+            "available": data["balance"] + income}
 
 
 def new_recovery_code():

@@ -1,15 +1,16 @@
-<!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>복구 코드 - 지갑이</title>
-</head>
-<body>
-<h1>준비됐어요</h1>
-<p>복구 코드</p>
-<p><strong style="font-size:1.5em; letter-spacing:0.1em">{{ code }}</strong></p>
-<p>이 코드는 다시 볼 수 없어요. 다른 기기에서 이어 쓸 때 필요해요.</p>
-<p><a href="/{% if today_q %}?today={{ today_q }}{% endif %}">홈으로</a></p>
-</body>
-</html>
+{% extends "base.html" %}
+{% from "_wallet.html" import wallet %}
+{% set no_nav = true %}
+{% block nav %}{% endblock %}
+
+{% block content %}
+{% set q = ("?today=" ~ today_q) if today_q else "" %}
+<div class="done">
+  <div class="start-char">{{ wallet("빵빵", 120) }}</div>
+  <span class="jua-chip st-빵빵">준비 끝!</span>
+  <h1 class="split-title">복구 코드를 적어 두세요</h1>
+  <div class="card code-card">{{ code }}</div>
+  <div class="warn-yellow">이 코드는 다시 볼 수 없어요. 다른 기기에서 이어 쓸 때 필요해요.</div>
+  <a class="btn" href="/{{ q }}">홈으로</a>
+</div>
+{% endblock %}

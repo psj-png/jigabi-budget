@@ -227,6 +227,48 @@ a { color: var(--blue-dark); }
 .look-row .arrow { color: var(--muted); font-weight: 700; }
 .look-row .jua { font-size: 16px; }
 
+/* 첫 설정 */
+.top .step-count { margin-left: auto; margin-right: 8px; font-size: 13px; color: var(--muted); }
+.progress { display: flex; gap: 4px; margin: 0 4px 16px; }
+.progress span { flex: 1; height: 4px; border-radius: 2px; background: #DCE3EE; }
+.progress span.on { background: #2563EB; }
+.card h2 { margin: 0 0 8px; font-size: 16px; }
+.card .hint { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+.line-row { padding: 10px 0; border-top: 1px solid var(--line); }
+.line-row:first-of-type { border-top: 0; }
+.line-row input[type="text"], .line-row input[type="number"], .line-row input[type="date"], .plain-input {
+  min-height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 12px; background: #FFFFFF; color: var(--text); font: inherit; font-size: 15px; }
+.line-row input[type="text"] { width: 100%; }
+.pair { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.pair input { min-width: 0; text-align: right; }
+.pair .day { width: 64px; }
+.pair .amt { flex: 1; }
+.main-pick { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 4px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+.main-pick:has(input:checked) { background: var(--blue-soft); border-color: var(--blue); color: var(--blue-dark); font-weight: 700; }
+.field-pair { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 8px; }
+.field-pair label { flex: 1; font-size: 14px; }
+.field-pair input { width: 140px; min-height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 12px; text-align: right; font: inherit; }
+.sum-card { background: var(--blue-soft); box-shadow: none; }
+.sum-card .big-money { color: var(--blue-dark); margin-bottom: 4px; }
+.wd-row { display: flex; justify-content: space-between; margin: 8px 0; }
+.wd { position: relative; }
+.wd input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.wd span { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: #FFFFFF; font-size: 14px; }
+.wd input:checked + span { background: var(--blue); border-color: var(--blue); color: #FFFFFF; font-weight: 700; }
+.wd input:focus-visible + span { outline: 2px solid var(--blue-dark); outline-offset: 2px; }
+.num-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.num-grid label { font-size: 12px; color: var(--muted); }
+.num-grid input, .date-grid input { display: block; width: 100%; min-height: 44px; margin-top: 2px; padding: 0 10px; border: 1px solid var(--border); border-radius: 12px; font: inherit; font-size: 15px; color: var(--text); background: #FFFFFF; }
+.num-grid input { text-align: right; }
+.date-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.date-grid label { font-size: 12px; color: var(--muted); }
+
+/* 복구 코드 */
+.done { text-align: center; }
+.done .start-char { margin-top: 12px; }
+.code-card { margin: 16px 0 12px; text-align: center; font-size: 28px; font-weight: 700; letter-spacing: 0.12em; font-variant-numeric: tabular-nums; }
+.warn-yellow { margin-bottom: 20px; padding: 12px 14px; border-radius: 16px; background: #FFF4D6; color: #8A5A00; font-size: 14px; text-align: left; }
+
 /* 하단 메뉴가 없는 화면 */
 .app.no-nav { padding-bottom: 32px; }
 
