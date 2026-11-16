@@ -1,96 +1,162 @@
-<!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>장바구니 - 지갑이</title>
-</head>
-<body>
-<h1>장바구니</h1>
+{% extends "base.html" %}
+{% from "_wallet.html" import wallet %}
+{% set active_tab = "cart" %}
+
+{% block content %}
+{% set q = ("?today=" ~ today_q) if today_q else "" %}
+<div class="top">
+  <a class="back" href="/{{ q }}" aria-label="뒤로"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+  <h1>장바구니 미리보기</h1>
+</div>
+<p class="top-sub">사기 전에 이번 기간을 미리 봐요</p>
 
 {% if not c.ready %}
-<p>먼저 설정이 필요해요.</p>
+<div class="card"><p>먼저 설정이 필요해요.</p></div>
 {% else %}
-<p><strong>{{ c.message }}</strong></p>
-{% if not c.ended %}
-<p>하루 여유 {{ "{:,}".format(c.now_daily) }}원{% if c.after %} → {{ "{:,}".format(c.after.daily)|replace("-", "−") }}원{% endif %}</p>
-{% endif %}
-{% if c.shortage %}<p>{{ c.shortage }}</p>{% endif %}
-{% if c.hours_text %}<p>{{ c.hours_text }}</p>{% endif %}
 
-{% if not c.ended %}
-<ul>
-{% for name in stages %}
-  <li>{{ name }}{% if name == c.now %} ← 지금{% endif %}{% if c.after and name == c.after.stage %} ← 사면{% endif %}</li>
-{% endfor %}
-</ul>
-{% endif %}
+{# 체크한 것 #}
+{% set chosen = c["items"]|selectattr("checked")|list %}
 
-<h2>사고 싶은 것</h2>
-<!-- 체크하면 바로 다시 그린다: 이 한 줄만 JS (앱 핵심 동작이라 예외) -->
-<form method="get" action="/cart">
-  {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-  {% for it in c["items"] %}
-  <p><label>
-    <input type="checkbox" name="item" value="{{ it.id }}" {% if it.checked %}checked{% endif %} onchange="this.form.submit()">
-    {{ it.name }} · {% if it.need_by %}{{ it.need_by }}{% else %}언제든{% endif %} · {{ "{:,}".format(it.price) }}원{% if it.chip %} · [{{ it.chip }}]{% endif %}
-  </label></p>
-  {% endfor %}
-  <noscript><button type="submit">보기</button></noscript>
-</form>
-<p>칩은 그것 하나만 샀을 때 지갑이 단계예요.</p>
+{# b) 결과 카드 #}
+<section class="card">
+  <div class="result">
+    <div class="result-main">
+      {% if c.after %}
+      {# message: "지금은 ○○인데, 이름을 사면 △△이 나와요" 에서 단계 이름만 Jua로 #}
+      {% set mid = c.message[4 + c.now|length : c.message|length - c.after.stage|length - 5] %}
+      <p class="result-title">지금은 <span class="jua st-{{ c.now }}">{{ c.now }}</span>{{ mid }}<span class="jua st-{{ c.after.stage }}">{{ c.after.stage }}</span>이 나와요</p>
+      {% else %}
+      <p class="result-title">{{ c.message }}</p>
+      {% endif %}
 
-<p><a href="/split?{% for it in c["items"] if it.checked %}item={{ it.id }}&{% endfor %}{% if today_q %}today={{ today_q }}{% endif %}">[나눠 사기 추천 보기]</a></p>
+      {% if c.shortage or c.hours_text %}
+      <p class="result-sub">{% if c.shortage %}{{ c.shortage }}{% endif %}{% if c.shortage and c.hours_text %} · {% endif %}{% if c.hours_text %}{{ chosen[0].name }}{% if chosen|length > 1 %} 외 {{ chosen|length - 1 }}개{% endif %} {{ c.hours_text }}{% endif %}</p>
+      {% endif %}
+
+      {% if not c.ended %}
+      <p class="daily-move">하루 여유 {{ "{:,}".format(c.now_daily) }}원{% if c.after %}<span class="arrow">→</span><b class="st-{{ c.after.stage }}">{{ "{:,}".format(c.after.daily)|replace("-", "−") }}원</b>{% endif %}</p>
+      {% endif %}
+
+      {% if not c.ended %}
+      <ul class="ladder">
+        {% for name in stages %}
+        <li class="st-{{ name }}">
+          <span class="mark"></span>
+          <span class="jua">{{ name }}</span>
+          {% if c.after and name == c.now and name == c.after.stage %}<span class="tag">지금 그대로</span>
+          {% else %}
+            {% if name == c.now %}<span class="tag">지금</span>{% endif %}
+            {% if c.after and name == c.after.stage %}<span class="tag tag-st">사면</span>{% endif %}
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+
+    {% if not c.ended %}
+    <div class="result-char">
+      {% if c.after %}
+      {{ wallet(c.after.stage, 112) }}
+      <p>사면 이렇게 돼요</p>
+      {% else %}
+      {{ wallet(c.now, 112) }}
+      <p>지금은 이래요</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+{# c) 담은 것 #}
+<section class="card">
+  <div class="card-head">
+    <b>담은 것 {{ c["items"]|length }}개</b>
+    <span class="small">체크한 것만 계산해요</span>
+  </div>
+  <!-- 체크하면 바로 다시 그린다: 이 한 줄만 JS (앱 핵심 동작이라 예외) -->
+  <form method="get" action="/cart">
+    {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+    <ul class="rows">
+      {% for it in c["items"] %}
+      <li class="row">
+        <label class="check-row">
+          <input type="checkbox" name="item" value="{{ it.id }}" {% if it.checked %}checked{% endif %} onchange="this.form.submit()">
+          <span class="row-main"><b>{{ it.name }}</b>
+            <span class="row-sub">{% if it.need_by %}필요한 날 {{ it.need_by.month }}/{{ it.need_by.day }}{% else %}언제든{% endif %}</span></span>
+          <span class="row-end"><b>{{ "{:,}".format(it.price) }}원</b>
+            {% if it.chip %}<span class="jua-chip st-{{ it.chip }}">{{ it.chip }}</span>{% endif %}</span>
+        </label>
+      </li>
+      {% endfor %}
+    </ul>
+    <noscript><button type="submit" class="btn-small">보기</button></noscript>
+  </form>
+
+  {% if c.planned %}
+  <p class="sub-title">살 계획</p>
+  <ul class="rows">
+    {% for it in c.planned %}
+    <li class="row">
+      <span class="row-main"><b>{{ it.name }}</b>
+        <span class="row-sub">{{ it.planned_date.month }}/{{ it.planned_date.day }}에 사기로 함</span></span>
+      <span class="row-end"><b>{{ "{:,}".format(it.price) }}원</b></span>
+      <form method="post" action="/cart/{{ it.item_id }}/unplan">
+        {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+        <button type="submit" class="btn-small">계획 취소</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <p class="note">칩은 그것 하나만 샀을 때 지갑이 단계예요.</p>
+</section>
+
+{# d) 사고 싶은 것 추가 #}
+<section class="card">
+  <div class="card-head"><b>사고 싶은 것 추가</b></div>
+  <form method="post" action="/cart/items">
+    {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+    <label class="field">이름<input type="text" name="name" maxlength="60" required></label>
+    <label class="field">가격 (원)<input type="number" name="price" min="1" required></label>
+    <label class="field">필요한 날 (비워도 돼요)<input type="date" name="need_by"></label>
+    <button type="submit" class="btn btn-sub">추가</button>
+  </form>
+</section>
+
+{# e) 최근 산 것 #}
+<section class="card">
+  <div class="card-head"><b>최근 산 것</b><span class="small">산 날 빼고 7일 안 반품 가능</span></div>
+  {% if c.recent %}
+  <ul class="rows">
+    {% for it in c.recent %}
+    <li class="row">
+      <span class="row-main"><b>{{ it.name }}</b>
+        <span class="row-sub">{{ it.bought_date.month }}/{{ it.bought_date.day }}에 산 것</span></span>
+      <span class="row-end"><b>{{ "{:,}".format(it.price) }}원</b></span>
+      <form method="post" action="/cart/{{ it.item_id }}/return">
+        {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+        <button type="submit" class="btn-small">반품</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="small">없어요</p>
+  {% endif %}
+</section>
+
+{# f) 나눠 사기 / 지금 살게요 #}
+<a class="btn" href="/split?{% for it in c["items"] if it.checked %}item={{ it.id }}&amp;{% endfor %}{% if today_q %}today={{ today_q }}{% endif %}">나눠 사기 추천 보기</a>
 
 {% if c.after %}
 <form method="post" action="/cart/buy">
   {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
   {% for it in c["items"] if it.checked %}<input type="hidden" name="item" value="{{ it.id }}">{% endfor %}
-  <button type="submit">{% if c.after.short > 0 %}그래도 지금 살게요{% else %}지금 살게요{% endif %}</button>
+  <button type="submit" class="link-btn">{% if c.after.short > 0 %}그래도 지금 살게요{% else %}지금 살게요{% endif %}</button>
 </form>
-{% if c.logged %}<p>오늘 밤 잔액을 적은 뒤에 산 것은 적은 잔액에서 뺐어요</p>{% endif %}
+{% if c.after.short > 0 %}<p class="center-note">누르면 어떻게 메울지 먼저 보여줘요</p>{% endif %}
+{% if c.logged %}<p class="center-note">오늘 밤 잔액을 적은 뒤에 산 것은 적은 잔액에서 뺐어요</p>{% endif %}
 {% endif %}
-
-{% if c.planned %}
-<h2>살 계획</h2>
-<ul>
-  {% for it in c.planned %}
-  <li>{{ it.name }} · {{ "{:,}".format(it.price) }}원 · {{ it.planned_date.month }}/{{ it.planned_date.day }}에 사기로 함
-    <form method="post" action="/cart/{{ it.item_id }}/unplan" style="display:inline">
-      {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-      <button type="submit">계획 취소</button>
-    </form>
-  </li>
-  {% endfor %}
-</ul>
 {% endif %}
-
-<h2>최근 산 것 (산 날 빼고 7일 안 반품 가능)</h2>
-{% if c.recent %}
-<ul>
-  {% for it in c.recent %}
-  <li>{{ it.name }} · {{ "{:,}".format(it.price) }}원 · {{ it.bought_date.month }}/{{ it.bought_date.day }}에 산 것
-    <form method="post" action="/cart/{{ it.item_id }}/return" style="display:inline">
-      {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-      <button type="submit">반품</button>
-    </form>
-  </li>
-  {% endfor %}
-</ul>
-{% else %}
-<p>없어요</p>
-{% endif %}
-
-<h2>사고 싶은 것 추가</h2>
-<form method="post" action="/cart/items">
-  {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-  <p><label>이름 <input type="text" name="name" maxlength="60" required></label></p>
-  <p><label>가격 <input type="number" name="price" min="1" required>원</label></p>
-  <p><label>필요한 날 <input type="date" name="need_by"></label> (비워도 돼요)</p>
-  <p><button type="submit">추가</button></p>
-</form>
-{% endif %}
-
-<p><a href="/{% if today_q %}?today={{ today_q }}{% endif %}">홈으로</a></p>
-</body>
-</html>
+{% endblock %}

@@ -1,44 +1,63 @@
-<!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>나눠 사기 - 지갑이</title>
-</head>
-<body>
-<h1>나눠 사기</h1>
+{% extends "base.html" %}
+{% from "_wallet.html" import wallet %}
+{% set active_tab = "cart" %}
+
+{% block content %}
+{% set q = ("?today=" ~ today_q) if today_q else "" %}
+<div class="top">
+  <a class="back" href="/cart?{% for i in items %}item={{ i }}&amp;{% endfor %}{% if today_q %}today={{ today_q }}{% endif %}" aria-label="뒤로"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+  <h1>나눠 사기 추천</h1>
+</div>
 
 {% if not s.ready %}
-<p>먼저 설정이 필요해요.</p>
+<div class="card"><p>먼저 설정이 필요해요.</p></div>
 {% else %}
-<p><strong>{{ s.message }}</strong></p>
-{% if s.note %}<p>{{ s.note }}</p>{% endif %}
+
+{# b) 제목: 나방은 Jua, 나방 색 #}
+{% if s.plan %}
+<p class="split-title">{{ s.message|e|replace("나방", '<span class="jua st-나방">나방</span>'|safe) }}</p>
+{% else %}
+<p class="split-title">{{ s.message }}</p>
+{% endif %}
+{% if s.note %}<p class="top-sub" style="margin-top: 0">{{ s.note }}</p>{% endif %}
 
 {% if s.plan %}
-{% for p in s.plan %}
-{% if p["items"] %}
-<h2>{{ p.label }}</h2>
-<ul>
-  {% for it in p["items"] %}
-  <li>{{ it[0] }} {{ "{:,}".format(it[1]) }}원</li>
-  {% endfor %}
-</ul>
-<p>{{ p.name }} {{ p.stage }} · 하루 여유 {{ "{:,}".format(p.daily) }}원</p>
-{% endif %}
-{% endfor %}
-<p>{{ s.income_note }}</p>
-{% endif %}
-{% endif %}
+{# c) 타임라인: 물건이 없는 기간은 건너뛴다 #}
+<section class="card">
+  <ul class="tl">
+    {% for p in s.plan %}
+    {% if p["items"] %}
+    <li class="tl-item{% if loop.index0 == 2 %} hollow{% endif %}">
+      <p class="tl-label">{{ p.label }}</p>
+      <ul class="tl-things">
+        {% for it in p["items"] %}
+        <li><span>{{ it[0] }}</span><b>{{ "{:,}".format(it[1]) }}원</b></li>
+        {% endfor %}
+      </ul>
+      <div class="tl-box st-{{ p.stage }}">
+        {{ wallet(p.stage, 40) }}
+        <span>{{ p.name }} <span class="jua">{{ p.stage }}</span> · 하루 여유 {{ "{:,}".format(p.daily) }}원</span>
+      </div>
+    </li>
+    {% endif %}
+    {% endfor %}
+  </ul>
+  {# d) 예상 수입 #}
+  <p class="note">{{ s.income_note }}</p>
+</section>
 
-{% if s.plan %}
-<form method="post" action="/split/save" style="display:inline">
-  {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-  {% for i in items %}<input type="hidden" name="item" value="{{ i }}">{% endfor %}
-  <button type="submit">이 계획으로 살게요</button>
-</form>
+{# e) 버튼 #}
+<div class="stack">
+  <form method="post" action="/split/save">
+    {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+    {% for i in items %}<input type="hidden" name="item" value="{{ i }}">{% endfor %}
+    <button type="submit" class="btn">이 계획으로 살게요</button>
+  </form>
+  <a class="btn btn-sub" href="/cart?{% for i in items %}item={{ i }}&amp;{% endfor %}{% if today_q %}today={{ today_q }}{% endif %}">직접 고를게요</a>
+</div>
+{% else %}
+{# f) 해답이 없거나 8개를 넘을 때: 안내만 #}
+<a class="btn btn-sub" href="/cart?{% for i in items %}item={{ i }}&amp;{% endfor %}{% if today_q %}today={{ today_q }}{% endif %}">직접 고를게요</a>
 {% endif %}
-<p>
-  <a href="/cart?{% for i in items %}item={{ i }}&{% endfor %}{% if today_q %}today={{ today_q }}{% endif %}">[직접 고를게요]</a></p>
-<p><a href="/{% if today_q %}?today={{ today_q }}{% endif %}">홈으로</a></p>
-</body>
-</html>
+{% endif %}
+{% endblock %}
