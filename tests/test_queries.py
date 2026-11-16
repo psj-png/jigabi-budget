@@ -1,6 +1,6 @@
 # DB에서 읽은 값으로 계산이 맞는지 확인한다. DB에 못 붙으면 건너뜀
 # 접속 정보는 app/db.py와 같은 환경변수 (docker compose를 띄운 상태라면
-# DB_HOST=127.0.0.1 DB_PORT=3307 DB_PASSWORD=<.env의 MYSQL_ROOT_PASSWORD>)
+# DB_HOST=127.0.0.1 DB_PORT=3317 DB_PASSWORD=<.env의 MYSQL_ROOT_PASSWORD>)
 from datetime import date
 
 import pytest

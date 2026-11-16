@@ -4,7 +4,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     ports:
-      - "3307:3306"
+      - "127.0.0.1:3317:3306"
     volumes:
       # 처음 실행할 때 db/ 안의 .sql 파일이 이름 순서대로 들어감 (schema → seed)
       - ./db:/docker-entrypoint-initdb.d
