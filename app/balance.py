@@ -2,7 +2,7 @@
 from datetime import timedelta
 
 from app import calc, queries
-from app.home import ensure_period
+from app.home import ensure_period, make_home
 
 
 def _blocked(conn, user_id, today, day):
@@ -46,7 +46,8 @@ NO_PERIOD = "앱을 시작하기 전 날짜라 적을 수 없어요"
 
 def get_form(conn, user_id, today, day):
     # message가 있으면 폼 대신 그 문장을 보여준다
-    form = {"day": day, "message": None, "show_income": False, "income_plan": 0}
+    form = {"day": day, "message": None, "show_income": False, "income_plan": 0,
+            "prev_balance": None}
     ctx = _context(conn, user_id, day)
     if ctx is None:
         form["message"] = NO_PERIOD
@@ -54,6 +55,7 @@ def get_form(conn, user_id, today, day):
     form["message"] = _blocked(conn, user_id, today, day)
     # 범위에 예정 수입이 있을 때만 '들어온 돈' 칸을 보여준다
     form["income_plan"] = ctx["income_plan"]
+    form["prev_balance"] = ctx["prev_balance"]
     form["show_income"] = ctx["income_plan"] > 0
     return form
 
@@ -76,3 +78,18 @@ def save(conn, user_id, today, day, balance, income_in):
     if nxt is not None and nxt["start_date"] == next_day:
         queries.update_opening_balance(conn, user_id, next_day, balance)
     return None
+
+
+def make_result(before, after, spent, day):
+    # 저장 결과 카드 값: before는 저장 전 make_home(오늘 쓸 수 있던 돈), after는 저장 후(내일 쓸 수 있는 돈)
+    # 새 계산은 없다. 두 값의 차이만 구한다
+    r = {"spent": spent, "day": day, "next_day": day + timedelta(days=1),
+         "before_budget": before["budget"], "stage_before": before["stage"],
+         "stage_after": after["stage"] or before["stage"],
+         "after_budget": after["budget"], "ended": after["budget"] is None,
+         "left": None, "diff": None}
+    if before["budget"] is not None:
+        r["left"] = before["budget"] - spent  # 0 이상이면 남긴 돈, 0 미만이면 더 쓴 돈
+        if after["budget"] is not None:
+            r["diff"] = after["budget"] - before["budget"]
+    return r

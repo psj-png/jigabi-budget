@@ -48,7 +48,8 @@ def ensure_period(conn, user_id, day):
     return queries.get_period(conn, user_id, day)
 
 
-def make_home(conn, user_id, today):
+def make_home(conn, user_id, today, before_night=False):
+    # before_night: 오늘 밤 잔액 기록이 없는 것처럼 계산한다 (밤 잔액 저장 결과 화면에서 '저장 전' 값을 볼 때)
     user = queries.get_user(conn, user_id)
     incomes = queries.get_incomes(conn, user_id)
     main = [i for i in incomes if i["is_main"]]
@@ -65,8 +66,9 @@ def make_home(conn, user_id, today):
     # 잔액 고르기: 오늘 밤 기록 > 기간 안의 가장 최근 기록 > 기간 시작 잔액
     # count_from: 수입·고정지출·약속·최소 생활비를 세는 첫날 (잔액 기준일 다음 날)
     logged = False
-    today_log = queries.get_balance_log(conn, user_id, today)
-    latest = queries.get_latest_balance_log(conn, user_id, today)
+    today_log = None if before_night else queries.get_balance_log(conn, user_id, today)
+    latest = queries.get_latest_balance_log(
+        conn, user_id, today - timedelta(days=1) if before_night else today)
     if today_log is not None:
         balance = today_log["balance"]
         logged = True

@@ -176,11 +176,11 @@ def home(request: Request, today: str = None):
     return templates.TemplateResponse(request, "home.html", {"h": data, "today_q": today})
 
 
-def balance_view(request, form, now, today_q, error):
+def balance_view(request, form, now, today_q, error, result=None):
     return templates.TemplateResponse(request, "balance.html", {
         "f": form, "today": now, "yesterday": now - timedelta(days=1),
         "today_q": today_q, "today_q_and": f"&today={today_q}" if today_q else "",
-        "error": error,
+        "error": error, "result": result,
     })
 
 
@@ -213,18 +213,26 @@ def balance_post(request: Request, day: str = Form(), balance: int = Form(),
 
     conn = get_conn()
     try:
+        # 저장 직전(오늘 쓸 수 있던 돈)과 저장 직후(내일 쓸 수 있는 돈)를 비교해 결과 카드를 만든다
+        before = make_home(conn, user_id, target, before_night=True)
         message = balance_page.save(conn, user_id, now, target, balance, income_in)
         form = balance_page.get_form(conn, user_id, now, target) if message else None
+        result = None
+        if not message:
+            after = make_home(conn, user_id, target)
+            spent = queries.get_balance_log(conn, user_id, target)["spent"]
+            result = balance_page.make_result(before, after, spent, target)
     finally:
         conn.close()
     if message:
         return balance_view(request, form, now, today, message)
-    # 저장하고 같은 today로 홈에 간다
-    return RedirectResponse("/" + (f"?today={today}" if today else ""), status_code=303)
+    return balance_view(request, None, now, today, None, result)
 
 
 @app.get("/appointments")
-def appointments_get(request: Request, today: str = None, day: str = None):
+def appointments_get(request: Request, today: str = None, day: str = None, amount: str = None,
+                     title: str = "", transport: str = None, transport_fare: str = None,
+                     preview: str = None):
     user_id = current_user(request)
     if user_id is None:
         return to_start()
@@ -232,6 +240,9 @@ def appointments_get(request: Request, today: str = None, day: str = None):
     target = parse_date(day, None)
     if target is not None and target < now:
         raise HTTPException(status_code=400, detail="오늘보다 앞선 날짜는 안 돼요")
+    # 미리보기 칸이 빈칸이거나 숫자가 아니면 없는 것으로 본다
+    amount = int(amount) if amount and amount.isdigit() else None
+    transport_fare = int(transport_fare) if transport_fare and transport_fare.isdigit() else None
 
     conn = get_conn()
     try:
@@ -244,11 +255,31 @@ def appointments_get(request: Request, today: str = None, day: str = None):
             routines = queries.get_routines(conn, user_id)
             fare = calc.transport_default(target, routines)
             max_fare = calc.max_fare(routines)
+
+        # 금액이 정해졌으면 넣은 뒤 하루 여유를 미리 본다 (R11과 같은 calc.preview)
+        # 교통비 체크는 [미리보기]로 온 경우 그 상태, 금액 칩으로 온 경우 기본값
+        transport_on = (transport is not None) if preview else (fare is not None and fare > 0)
+        fare_amount = (transport_fare if transport_fare is not None else max_fare) if transport_on else 0
+        look = None
+        if target is not None and amount is not None and amount >= 0:
+            h = make_home(conn, user_id, now)
+            if h["ready"] and h["daily"] is not None:
+                comfort = queries.get_user(conn, user_id)["comfort_daily"]
+                first = now + timedelta(days=1) if h["logged"] else now
+                # 이번 기간(남은 날) 안의 약속만 이번 여유 돈에서 빠진다
+                counted = first <= target <= h["end"]
+                if counted:
+                    daily, stage, _ = calc.preview(h["free"], h["days_left"], amount + fare_amount, comfort)
+                else:
+                    daily, stage = h["daily"], h["stage"]
+                look = {"now_daily": h["daily"], "now_stage": h["stage"],
+                        "daily": daily, "stage": stage, "counted": counted}
     finally:
         conn.close()
     return templates.TemplateResponse(request, "appointments.html", {
         "appts": appts, "day": target, "fare": fare, "max_fare": max_fare,
-        "today_q": today, "now": now,
+        "today_q": today, "now": now, "amount": amount, "title": title,
+        "transport_on": transport_on, "fare_amount": fare_amount, "look": look,
     })
 
 
