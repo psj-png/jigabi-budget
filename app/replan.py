@@ -24,6 +24,9 @@ def make_replan(conn, user_id, today):
 
     items = queries.get_items(conn, user_id)
     returnable = [i for i in items if i["status"] == "bought" and calc.can_return(i["bought_date"], today)]
+    # 이번 기간에 이미 빌린 비상금 (비상금이 0원이면 '이미 빌렸어요'로 보여준다)
+    per = queries.get_period(conn, user_id, today)
+    borrowed = calc.loans_sum(per["start_date"], h["end"], queries.get_loans(conn, user_id))
     rows = [{"appt": a, "cut": c} for a, c in zip(appts, cuts)]
     hours = calc.work_hours(left, user["hourly_wage"]) if left > 0 else None
     # 화면용: 지금 단계, 남은 날, 갚기 시작하는 날, 제안대로 메운 뒤의 단계 (새 규칙 없이 calc 그대로)
@@ -32,7 +35,7 @@ def make_replan(conn, user_id, today):
         after_free = h["free"] + sum(cuts) + borrow
         after_stage = calc.stage(calc.daily_margin(after_free, h["days_left"]), user["comfort_daily"])
     return {"ready": True, "short": short, "returnable": returnable, "rows": rows,
-            "fund": user["emergency_fund"], "borrow": borrow, "left": left, "hours": hours,
+            "fund": user["emergency_fund"], "borrow": borrow, "borrowed": borrowed, "left": left, "hours": hours,
             "stage": h["stage"], "days_left": h["days_left"], "next_start": h["end"] + timedelta(days=1),
             "after_stage": after_stage}
 

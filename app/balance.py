@@ -93,3 +93,46 @@ def make_result(before, after, spent, day):
         if after["budget"] is not None:
             r["diff"] = after["budget"] - before["budget"]
     return r
+
+
+def guess_balance(conn, user_id, day, spent):
+    # R10-1 쓴 돈으로 적기: 그날 아침 잔액에서 그날 들어오고 나간 돈과 '쓴 돈'을 빼 잔액을 거꾸로 구한다
+    # 그 사이 안 적은 날은 R10대로 최소 생활비와 약속만큼 썼다고 본다. (잔액, 들어온 돈)을 돌려준다
+    ctx = _context(conn, user_id, day)
+    if ctx is None:
+        return None
+    usual = 0
+    last_missed = day - timedelta(days=1)
+    if ctx["start"] <= last_missed:
+        routines = queries.get_routines(conn, user_id)
+        appts = queries.get_appointments(conn, user_id)
+        usual = (calc.min_living(ctx["start"], last_missed, routines)
+                 + calc.appointments_sum(ctx["start"], last_missed, appts))
+    balance = (ctx["prev_balance"] + ctx["income_plan"] - ctx["fixed_out"] - ctx["bought"]
+               - usual - spent)
+    return balance, ctx["income_plan"]
+
+
+def make_card(conn, user_id, today, day, mode=None, guess=None, edit=False, error=None):
+    # 홈 맨 아래 밤 잔액 카드 (13~15): 적기 전(input) / 쓴 돈으로(spent) / 맞나요?(confirm) / 적은 뒤(result)
+    card = {"day": day, "is_today": day == today, "mode": "input", "form": None,
+            "result": None, "guess": guess, "error": error, "other_day": None}
+    log = queries.get_balance_log(conn, user_id, day)
+    if log is not None and not edit and mode is None and guess is None and error is None:
+        # 적은 뒤에는 같은 자리에서 결과로 바뀐다 (14). 저장 전 값은 before_night로 다시 구한다
+        before = make_home(conn, user_id, day, before_night=True)
+        after = make_home(conn, user_id, day)
+        card["mode"] = "result"
+        card["result"] = make_result(before, after, log["spent"], day)
+        return card
+    card["form"] = get_form(conn, user_id, today, day)
+    if guess is not None:
+        card["mode"] = "confirm"
+    elif mode == "spent":
+        card["mode"] = "spent"
+    # 오늘 기록이 없을 때만 오늘 밤 / 어젯밤을 바꿔 적을 수 있다 (앱을 시작하기 전 날은 빼고)
+    if queries.get_balance_log(conn, user_id, today) is None:
+        other = today - timedelta(days=1) if day == today else today
+        if queries.get_period(conn, user_id, other) is not None:
+            card["other_day"] = other
+    return card

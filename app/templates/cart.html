@@ -3,6 +3,27 @@
 {% set active_tab = "cart" %}
 
 {% block content %}
+{# 사고 싶은 것 추가 폼: 빈 장바구니 카드와 아래 카드에서 같이 쓴다 #}
+{% macro add_form(today_q, now, cap, ai_on) %}
+{% if ai_on %}
+{# 캡처로 담기 (R20): AI는 칸만 채우고, 저장은 아래 [추가]로 #}
+<form method="post" action="/cart/capture" enctype="multipart/form-data" class="capture">
+  {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+  <label class="field">쇼핑 화면 캡처로 채우기<input type="file" name="shot" accept="image/png,image/jpeg,image/webp" required></label>
+  <button type="submit" class="btn btn-sub">캡처 읽기</button>
+  <p class="small">캡처는 이름과 가격을 읽는 데만 쓰고 저장하지 않아요.</p>
+</form>
+{% endif %}
+{% if cap and cap.error %}<div class="warn">{{ cap.error }}</div>{% endif %}
+{% if cap and (cap.name or cap.price) %}<div class="notice">지갑이가 캡처에서 읽은 값이에요. 틀리면 고친 뒤 [추가]를 눌러 주세요.</div>{% endif %}
+<form method="post" action="/cart/items" id="add">
+  {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+  <label class="field">이름<input type="text" name="name" maxlength="60" required value="{{ cap.name if cap else '' }}"{% if cap and cap.name %} class="ai-filled"{% endif %}></label>
+  <label class="field">가격 (원)<input type="number" name="price" min="1" required value="{{ cap.price if cap else '' }}"{% if cap and cap.price %} class="ai-filled"{% endif %}></label>
+  <label class="field">필요한 날 (비워도 돼요)<input type="date" name="need_by" min="{{ now }}"></label>
+  <button type="submit" class="btn btn-sub">추가</button>
+</form>
+{% endmacro %}
 {% set q = ("?today=" ~ today_q) if today_q else "" %}
 <div class="top">
   <a class="back" href="/{{ q }}" aria-label="뒤로"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
@@ -16,6 +37,16 @@
 
 {# 체크한 것 #}
 {% set chosen = c["items"]|selectattr("checked")|list %}
+
+{# 20 빈 상태: 입력 칸을 바로 보여준다 #}
+{% set empty = not c["items"] and not c.planned %}
+{% if empty %}
+<section class="card empty">
+  <h2>아직 담은 게 없어요</h2>
+  <p>사고 싶은 걸 적어 보면 지갑이가 어떻게 되는지 보여줄게요.</p>
+  {{ add_form(today_q, now, cap, ai_on) }}
+</section>
+{% else %}
 
 {# b) 결과 카드 #}
 <section class="card">
@@ -101,10 +132,18 @@
       <span class="row-main"><b>{{ it.name }}</b>
         <span class="row-sub">{{ it.planned_date.month }}/{{ it.planned_date.day }}에 사기로 함</span></span>
       <span class="row-end"><b>{{ "{:,}".format(it.price) }}원</b></span>
-      <form method="post" action="/cart/{{ it.item_id }}/unplan">
-        {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-        <button type="submit" class="btn-small">계획 취소</button>
-      </form>
+      <div class="row-btns">
+        {# 사기로 한 날이 되면 홈이 '장바구니에서 [살게요]'로 안내한다 (buy_items는 planned도 산다) #}
+        <form method="post" action="/cart/buy">
+          {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+          <input type="hidden" name="item" value="{{ it.item_id }}">
+          <button type="submit" class="btn-small">살게요</button>
+        </form>
+        <form method="post" action="/cart/{{ it.item_id }}/unplan">
+          {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+          <button type="submit" class="btn-small">계획 취소</button>
+        </form>
+      </div>
     </li>
     {% endfor %}
   </ul>
@@ -115,14 +154,10 @@
 {# d) 사고 싶은 것 추가 #}
 <section class="card">
   <div class="card-head"><b>사고 싶은 것 추가</b></div>
-  <form method="post" action="/cart/items">
-    {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-    <label class="field">이름<input type="text" name="name" maxlength="60" required></label>
-    <label class="field">가격 (원)<input type="number" name="price" min="1" required></label>
-    <label class="field">필요한 날 (비워도 돼요)<input type="date" name="need_by"></label>
-    <button type="submit" class="btn btn-sub">추가</button>
-  </form>
+  {{ add_form(today_q, now, cap, ai_on) }}
 </section>
+
+{% endif %}
 
 {# e) 최근 산 것 #}
 <section class="card">
@@ -147,6 +182,7 @@
 </section>
 
 {# f) 나눠 사기 / 지금 살게요 #}
+{% if not empty %}
 <a class="btn" href="/split?{% for it in c["items"] if it.checked %}item={{ it.id }}&amp;{% endfor %}{% if today_q %}today={{ today_q }}{% endif %}">나눠 사기 추천 보기</a>
 
 {% if c.after %}
@@ -157,6 +193,7 @@
 </form>
 {% if c.after.short > 0 %}<p class="center-note">누르면 어떻게 메울지 먼저 보여줘요</p>{% endif %}
 {% if c.logged %}<p class="center-note">오늘 밤 잔액을 적은 뒤에 산 것은 적은 잔액에서 뺐어요</p>{% endif %}
+{% endif %}
 {% endif %}
 {% endif %}
 {% endblock %}

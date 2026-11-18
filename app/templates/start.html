@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_wallet.html" import wallet %}
 {% set no_nav = true %}
+{% set hide_demo_bar = true %}
 {% set body_class = "start-page" %}
 {% block nav %}{% endblock %}
 
@@ -13,15 +14,16 @@
 
 <h1 class="start-h1">사기 전에 이번 달을 미리 보고,<br>산 뒤엔 남은 날을 다시 짜요</h1>
 
-<section class="card">
+{# 설명 대신 먼저 써 보게 (흐름 1-1): 예시가 가장 큰 버튼 #}
+<a class="btn" href="/demo{{ q }}">예시로 먼저 해 보기</a>
+<a class="btn btn-sub start-mine" href="/setup{{ q }}">내 걸로 시작하기</a>
+<p class="start-note">로그인 없이 시작해요. 기록은 이 기기, 이 브라우저에만 저장돼요.</p>
+
+<section class="card start-about">
   <ul class="start-list">
     <li><span class="num">1</span><span>사고 싶은 걸 담으면 지갑이가 얼마나 홀쭉해지는지 보여줘요</span></li>
     <li><span class="num">2</span><span>밥값·교통비 같은 최소 생활비는 끝까지 지켜요</span></li>
     <li><span class="num">3</span><span>하루 한 번, 잔액만 알려주면 돼요</span></li>
   </ul>
 </section>
-
-<a class="btn" href="/setup{{ q }}">시작하기</a>
-<p class="start-note">로그인 없이 시작해요 · 다른 기기에선 복구 코드로 이어 써요</p>
-<a class="start-demo" href="/demo{{ q }}">예시 사람으로 둘러보기</a>
 {% endblock %}

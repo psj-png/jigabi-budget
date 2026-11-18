@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "_wallet.html" import wallet %}
+{% set no_nav = true %}
+{% set hide_demo_bar = true %}
+{% block nav %}{% endblock %}
+
+{% block content %}
+{# main.py의 에러 핸들러가 그린다: {"detail": ...} JSON 대신 이 화면 #}
+<div class="done">
+  <div class="start-char">{{ wallet("홀쭉", 120) }}</div>
+  <h1 class="split-title">{{ message }}</h1>
+  <p class="small">앞 화면으로 돌아가서 다시 해 주세요.</p>
+  <div class="stack">
+    {# JS가 꺼져 있으면 홈으로 간다 #}
+    <a class="btn" href="/" onclick="history.back(); return false;">앞 화면으로</a>
+    <a class="btn btn-sub" href="/">홈으로</a>
+  </div>
+</div>
+{% endblock %}

@@ -187,16 +187,15 @@ def get_user_id(conn, public_id):
     return row["user_id"] if row else None
 
 
-def create_account(conn, data, public_id, recovery_hash, start, end):
+def create_account(conn, data, public_id, start, end):
     # 첫 설정 저장: users -> incomes -> fixed_costs -> routines·routine_days -> periods
     # 한 트랜잭션이라 중간에 실패하면 전부 되돌린다
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO users (public_id, recovery_hash, comfort_daily, hourly_wage, "
-                "emergency_fund) VALUES (%s, %s, %s, %s, %s)",
-                (public_id, recovery_hash, data["comfort_daily"], data["hourly_wage"],
-                 data["emergency_fund"]),
+                "INSERT INTO users (public_id, comfort_daily, hourly_wage, emergency_fund) "
+                "VALUES (%s, %s, %s, %s)",
+                (public_id, data["comfort_daily"], data["hourly_wage"], data["emergency_fund"]),
             )
             user_id = cur.lastrowid
 
@@ -352,3 +351,224 @@ def add_emergency_fund(conn, user_id, delta):
             "UPDATE users SET emergency_fund = emergency_fund + %s WHERE user_id = %s",
             (delta, user_id),
         )
+
+
+# ---- 되돌리기 (19, 22): commit 안 함, purchase.py가 묶는다 ----
+def unbuy_items(conn, user_id, item_ids, day):
+    # 그날 산 것만 사기 전으로: 계획에서 산 것이면 계획으로, 아니면 담은 것으로. 되돌린 물건 목록
+    if not item_ids:
+        return []
+    marks = ", ".join(["%s"] * len(item_ids))
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT item_id, price FROM wish_items WHERE user_id = %s AND status = 'bought' "
+            f"AND bought_date = %s AND item_id IN ({marks})",
+            (user_id, day, *item_ids),
+        )
+        rows = cur.fetchall()
+        for r in rows:
+            cur.execute(
+                "UPDATE wish_items SET status = IF(planned_date IS NULL, 'wish', 'planned'), "
+                "bought_date = NULL, received_date = NULL WHERE item_id = %s AND user_id = %s",
+                (r["item_id"], user_id),
+            )
+    return rows
+
+
+def unreturn_item(conn, user_id, item_id, day):
+    # 그날 반품한 것만 다시 산 것으로
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE wish_items SET status = 'bought', returned_date = NULL "
+            "WHERE item_id = %s AND user_id = %s AND status = 'returned' AND returned_date = %s",
+            (item_id, user_id, day),
+        )
+        return cur.rowcount
+
+
+# ---- 설정 (흐름 6): 돈 들어오는 날·고정비는 한 줄씩 바로 저장한다 ----
+def list_incomes(conn, user_id):
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT income_id, name, day_of_month, amount, is_main FROM incomes "
+            "WHERE user_id = %s ORDER BY is_main DESC, day_of_month, income_id",
+            (user_id,),
+        )
+        rows = cur.fetchall()
+    for r in rows:
+        r["is_main"] = bool(r["is_main"])
+    return rows
+
+
+def insert_income(conn, user_id, name, day_of_month, amount):
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO incomes (user_id, name, day_of_month, amount) VALUES (%s, %s, %s, %s)",
+            (user_id, name, day_of_month, amount),
+        )
+    conn.commit()
+
+
+def update_income(conn, user_id, income_id, name, day_of_month, amount):
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE incomes SET name = %s, day_of_month = %s, amount = %s "
+            "WHERE income_id = %s AND user_id = %s",
+            (name, day_of_month, amount, income_id, user_id),
+        )
+    conn.commit()
+
+
+def delete_income(conn, user_id, income_id):
+    # 기간 기준인 돈은 지우지 않는다. 지운 줄 수를 돌려준다
+    with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM incomes WHERE income_id = %s AND user_id = %s AND is_main = FALSE",
+            (income_id, user_id),
+        )
+        count = cur.rowcount
+    conn.commit()
+    return count
+
+
+def set_main_income(conn, user_id, income_id):
+    # 기간 기준은 하나만: 모두 끄고 고른 것만 켠다 (한 트랜잭션). 내 것이 아니면 False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT income_id FROM incomes WHERE income_id = %s AND user_id = %s",
+                        (income_id, user_id))
+            if cur.fetchone() is None:
+                conn.rollback()
+                return False
+            cur.execute("UPDATE incomes SET is_main = FALSE WHERE user_id = %s", (user_id,))
+            cur.execute("UPDATE incomes SET is_main = TRUE WHERE income_id = %s AND user_id = %s",
+                        (income_id, user_id))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    return True
+
+
+def list_fixed(conn, user_id):
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT fixed_id, name, day_of_month, amount FROM fixed_costs "
+            "WHERE user_id = %s ORDER BY day_of_month, fixed_id",
+            (user_id,),
+        )
+        return cur.fetchall()
+
+
+def insert_fixed(conn, user_id, name, day_of_month, amount):
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO fixed_costs (user_id, name, day_of_month, amount) VALUES (%s, %s, %s, %s)",
+            (user_id, name, day_of_month, amount),
+        )
+    conn.commit()
+
+
+def update_fixed(conn, user_id, fixed_id, name, day_of_month, amount):
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE fixed_costs SET name = %s, day_of_month = %s, amount = %s "
+            "WHERE fixed_id = %s AND user_id = %s",
+            (name, day_of_month, amount, fixed_id, user_id),
+        )
+    conn.commit()
+
+
+def delete_fixed(conn, user_id, fixed_id):
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM fixed_costs WHERE fixed_id = %s AND user_id = %s", (fixed_id, user_id))
+    conn.commit()
+
+
+# ---- 설정: 가는 곳. 아래 셋은 commit 안 함 (settings.py가 묶는다) ----
+def list_routines(conn, user_id):
+    # get_routines에 이름까지 (설정 화면용)
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT routine_id, name, round_trip_fare, meals_out, meal_price, start_date, end_date "
+            "FROM routines WHERE user_id = %s ORDER BY routine_id",
+            (user_id,),
+        )
+        routines = cur.fetchall()
+        cur.execute(
+            "SELECT d.routine_id, d.weekday FROM routine_days d "
+            "JOIN routines r ON r.routine_id = d.routine_id WHERE r.user_id = %s ORDER BY d.weekday",
+            (user_id,),
+        )
+        days = cur.fetchall()
+    for r in routines:
+        r["weekdays"] = [d["weekday"] for d in days if d["routine_id"] == r["routine_id"]]
+    return routines
+
+
+def insert_routine(conn, user_id, r):
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO routines (user_id, name, round_trip_fare, meals_out, meal_price, "
+            "start_date, end_date) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (user_id, r["name"], r["round_trip_fare"], r["meals_out"], r["meal_price"],
+             r["start_date"], r["end_date"]),
+        )
+        routine_id = cur.lastrowid
+        for weekday in r["weekdays"]:
+            cur.execute("INSERT INTO routine_days (routine_id, weekday) VALUES (%s, %s)",
+                        (routine_id, weekday))
+    return routine_id
+
+
+def end_routine(conn, user_id, routine_id, end_date):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE routines SET end_date = %s WHERE routine_id = %s AND user_id = %s",
+                    (end_date, routine_id, user_id))
+
+
+def delete_routine(conn, user_id, routine_id):
+    # routine_days는 ON DELETE CASCADE로 같이 지워진다
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM routines WHERE routine_id = %s AND user_id = %s", (routine_id, user_id))
+
+
+# ---- 설정: 숫자, 지우기 ----
+def update_user_numbers(conn, user_id, comfort_daily, hourly_wage, emergency_fund):
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE users SET comfort_daily = %s, hourly_wage = %s, emergency_fund = %s "
+            "WHERE user_id = %s",
+            (comfort_daily, hourly_wage, emergency_fund, user_id),
+        )
+    conn.commit()
+
+
+def delete_user(conn, user_id):
+    # 다른 표는 모두 ON DELETE CASCADE로 같이 지워진다
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
+    conn.commit()
+
+
+# ---- 지난 기간 돌아보기 (29) ----
+def get_periods(conn, user_id, until):
+    # until 날까지 시작한 기간들, 최근 것부터
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT start_date, end_date, opening_balance, repay_amount FROM periods "
+            "WHERE user_id = %s AND start_date <= %s ORDER BY start_date DESC",
+            (user_id, until),
+        )
+        return cur.fetchall()
+
+
+def get_balance_logs(conn, user_id, start, end):
+    # 범위 안 밤 잔액 기록 (uq_user_date 인덱스를 범위로 탄다)
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT log_date, balance, spent FROM balance_logs "
+            "WHERE user_id = %s AND log_date BETWEEN %s AND %s ORDER BY log_date",
+            (user_id, start, end),
+        )
+        return cur.fetchall()

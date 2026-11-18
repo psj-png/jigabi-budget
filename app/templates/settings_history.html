@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% set active_tab = "settings" %}
+
+{% block content %}
+{% set q = ("?today=" ~ today_q) if today_q else "" %}
+{% set qa = ("&today=" ~ today_q) if today_q else "" %}
+<div class="top">
+  <a class="back" href="/settings{{ q }}" aria-label="뒤로"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+  <h1>지난 기간 돌아보기</h1>
+</div>
+
+{% if not hist.rows %}
+<section class="card"><p class="small">아직 돌아볼 기간이 없어요.</p></section>
+{% else %}
+{% set s = hist.sel %}
+<section class="card">
+  <ul class="menu">
+    {% for r in hist.rows %}
+    <li><a href="/settings/history?start={{ r.start }}{{ qa }}"{% if r.start == s.start %} aria-current="true"{% endif %}><span>{{ r.start.month }}/{{ r.start.day }}~{{ r.end.month }}/{{ r.end.day }}{% if r.current %} · 지금 기간{% endif %}<small>{{ r.nights }}밤 적음 · 적은 날 쓴 돈 {{ "{:,}".format(r.spent) }}원{% if r.end_stage %} · 끝날 때 {{ r.end_stage }}{% endif %}</small></span></a></li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card">
+  <h2>{{ s.start.month }}/{{ s.start.day }}~{{ s.end.month }}/{{ s.end.day }}</h2>
+  <p class="small">{{ s.days }}일 중 {{ s.nights }}밤 적었어요. 적은 날만 쓴 돈을 알 수 있어요.</p>
+  <div class="bars" aria-hidden="true">
+    {% for b in hist.bars %}{% if b.spent is none %}<span class="none"></span>{% else %}<span style="height: {{ [b.pct, 4]|max }}%"></span>{% endif %}{% endfor %}
+  </div>
+  <div class="bars-axis small"><span>{{ s.start.month }}/{{ s.start.day }}</span><span>{{ s.last.month }}/{{ s.last.day }}</span></div>
+  {% if hist.diff is not none %}
+  <p class="result-line">{% if hist.diff < 0 %}지난 기간보다 {{ "{:,}".format(-hist.diff) }}원 덜 썼어요{% elif hist.diff > 0 %}지난 기간보다 {{ "{:,}".format(hist.diff) }}원 더 썼어요{% else %}지난 기간과 똑같이 썼어요{% endif %}</p>
+  <p class="small">적은 날끼리 비교했어요.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head"><b>산 것</b></div>
+  {% if s.bought %}
+  <ul class="rows">
+    {% for it in s.bought %}
+    <li class="row"><span class="row-main"><b>{{ it.name }}</b><span class="row-sub">{{ it.bought_date.month }}/{{ it.bought_date.day }}{% if it.status == "returned" %} · 반품했어요{% endif %}</span></span><span class="row-end"><b>{{ "{:,}".format(it.price) }}원</b></span></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="small">없어요</p>
+  {% endif %}
+  {% if s.loans %}
+  <div class="card-head gap-top"><b>비상금에서 빌린 돈</b></div>
+  <ul class="rows">
+    {% for x in s.loans %}
+    <li class="row"><span class="row-main"><b>{{ x.borrowed_on.month }}/{{ x.borrowed_on.day }}</b></span><span class="row-end"><b>{{ "{:,}".format(x.amount) }}원</b></span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% set active_tab = "settings" %}
+
+{% block content %}
+{% set q = ("?today=" ~ today_q) if today_q else "" %}
+{% set qa = ("&today=" ~ today_q) if today_q else "" %}
+<div class="top">
+  <a class="back" href="/settings{{ q }}" aria-label="뒤로"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+  <h1>데이터 지우기</h1>
+</div>
+
+<section class="card">
+  <h2>정말 지울까요?</h2>
+  <p>돈 들어오는 날, 가는 곳, 밤 잔액 기록, 장바구니가 모두 지워져요. 되돌릴 수 없어요.</p>
+  <form method="post" action="/settings/delete">{% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}<button type="submit" class="btn btn-danger fill">모두 지우기</button></form>
+  <a class="btn btn-sub gap-top" href="/settings{{ q }}">그만두기</a>
+</section>
+{% endblock %}

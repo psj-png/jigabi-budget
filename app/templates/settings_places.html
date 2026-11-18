@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% set active_tab = "settings" %}
+
+{% block content %}
+{% set q = ("?today=" ~ today_q) if today_q else "" %}
+{% set qa = ("&today=" ~ today_q) if today_q else "" %}
+<div class="top">
+  <a class="back" href="/settings{{ q }}" aria-label="뒤로"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+  <h1>가는 곳</h1>
+</div>
+
+<p class="top-sub">고치면 오늘부터 바뀌어요. 지난 날 계산은 그대로예요.</p>
+{% if error %}<div class="warn">{{ error }}</div>{% endif %}
+
+{% if p.per %}
+<section class="card">
+  <b>이번 기간 최소 생활비 {{ "{:,}".format(p.total) }}원</b>
+  {% if p.parts %}
+  <p class="formula">= {% for x in p.parts %}{{ x.name }} {{ x.days }}일 × {{ "{:,}".format(x.per_day) }}원{% if not loop.last %} + {% endif %}{% endfor %}</p>
+  {% endif %}
+  <p class="small">{{ p.per.start_date.month }}/{{ p.per.start_date.day }}~{{ p.per.end_date.month }}/{{ p.per.end_date.day }} 동안 가는 날마다 밥값과 왕복 교통비를 더했어요.</p>
+</section>
+{% endif %}
+
+{% for r in p.places %}
+<section class="card">
+  <details class="edit-row">
+    <summary><span><b>{{ r.name }}</b><small>{{ weekday_text(r.weekdays) }} · {% if r.meals_out %}{{ r.meals_out }}끼 × {{ "{:,}".format(r.meal_price) }}원{% else %}밖에서 안 먹어요{% endif %} · 왕복 {{ "{:,}".format(r.round_trip_fare) }}원{% if r.start_date and r.start_date > now %} · {{ r.start_date.month }}/{{ r.start_date.day }}부터{% endif %}</small></span></summary>
+    <form method="post" action="/settings/places/{{ r.routine_id }}">
+      {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+      <label class="field">이름<input type="text" name="name" value="{{ r.name }}" maxlength="20" placeholder="예: 학교" required></label>
+      <div class="wd-row">
+        {% for label in ["월", "화", "수", "목", "금", "토", "일"] %}
+        <label class="wd"><input type="checkbox" name="wd" value="{{ loop.index0 }}"{% if loop.index0 in r.weekdays %} checked{% endif %}><span>{{ label }}</span></label>
+        {% endfor %}
+      </div>
+      <div class="num-grid">
+        <label>밖에서 먹는 끼니 수<input type="number" name="meals" value="{{ r.meals_out }}" min="0" max="10"></label>
+        <label>한 끼 가격 (원)<input type="number" name="price" value="{{ r.meal_price }}" min="0"></label>
+        <label>왕복 교통비 (원)<input type="number" name="fare" value="{{ r.round_trip_fare }}" min="0"></label>
+      </div>
+      <details class="more">
+        <summary>자세히 (시작일·끝나는 날)</summary>
+        <div class="date-grid">
+          <label>시작일<input type="date" name="start" value="{{ r.start_date or '' }}"></label>
+          <label>끝나는 날<input type="date" name="end" value="{{ r.end_date or '' }}"></label>
+        </div>
+      </details>
+
+      <button type="submit" class="btn">저장</button>
+    </form>
+    <form method="post" action="/settings/places/{{ r.routine_id }}/end">{% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}<button type="submit" class="btn btn-danger gap-top">이제 안 가요</button></form>
+  </details>
+</section>
+{% else %}
+<section class="card"><p class="small">가는 곳이 없어요. 지금은 밥값·교통비를 0원으로 계산해요.</p></section>
+{% endfor %}
+
+<section class="card">
+  <details class="more"{% if not p.places %} open{% endif %}>
+    <summary>+ 가는 곳 더하기</summary>
+    {% set r = {"name": "", "weekdays": [], "meals_out": 0, "meal_price": 0, "round_trip_fare": 0, "start_date": none, "end_date": none} %}
+    <form method="post" action="/settings/places/add">
+      {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+      <label class="field">이름<input type="text" name="name" value="{{ r.name }}" maxlength="20" placeholder="예: 학교" required></label>
+      <div class="wd-row">
+        {% for label in ["월", "화", "수", "목", "금", "토", "일"] %}
+        <label class="wd"><input type="checkbox" name="wd" value="{{ loop.index0 }}"{% if loop.index0 in r.weekdays %} checked{% endif %}><span>{{ label }}</span></label>
+        {% endfor %}
+      </div>
+      <div class="num-grid">
+        <label>밖에서 먹는 끼니 수<input type="number" name="meals" value="{{ r.meals_out }}" min="0" max="10"></label>
+        <label>한 끼 가격 (원)<input type="number" name="price" value="{{ r.meal_price }}" min="0"></label>
+        <label>왕복 교통비 (원)<input type="number" name="fare" value="{{ r.round_trip_fare }}" min="0"></label>
+      </div>
+      <details class="more">
+        <summary>자세히 (시작일·끝나는 날)</summary>
+        <div class="date-grid">
+          <label>시작일<input type="date" name="start" value="{{ r.start_date or '' }}"></label>
+          <label>끝나는 날<input type="date" name="end" value="{{ r.end_date or '' }}"></label>
+        </div>
+      </details>
+
+      <button type="submit" class="btn btn-sub">넣기</button>
+    </form>
+  </details>
+</section>
+{% endblock %}

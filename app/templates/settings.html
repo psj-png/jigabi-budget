@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% set active_tab = "settings" %}
+
+{% block content %}
+{% set q = ("?today=" ~ today_q) if today_q else "" %}
+{% set qa = ("&today=" ~ today_q) if today_q else "" %}
+
+<header class="page-title"><h1>설정</h1></header>
+
+{% if s.per %}
+<section class="card card-blue">
+  <h2>이번 기간 최소 생활비 {{ "{:,}".format(s.min_living) }}원</h2>
+  <p>{{ s.per.start_date.month }}/{{ s.per.start_date.day }}~{{ s.per.end_date.month }}/{{ s.per.end_date.day }} · 밥값·교통비로 꼭 나가는 돈이에요. 아래 값으로 정해져요.</p>
+</section>
+{% endif %}
+
+<section class="card">
+  <ul class="menu">
+    <li><a href="/settings/incomes{{ q }}"><span>돈 들어오는 날<small>{% for i in s.incomes %}{{ i.name }} {{ i.day_of_month }}일{% if not loop.last %}, {% endif %}{% else %}없어요{% endfor %}</small></span></a></li>
+    <li><a href="/settings/fixed{{ q }}"><span>고정비<small>{% for f in s.fixed %}{{ f.name }} {{ f.day_of_month }}일{% if not loop.last %}, {% endif %}{% else %}없어요{% endfor %}</small></span></a></li>
+    <li><a href="/settings/places{{ q }}"><span>가는 곳<small>{% for r in s.places %}{{ r.name }}{% if not loop.last %}, {% endif %}{% else %}없어요{% endfor %}</small></span></a></li>
+    <li><a href="/settings/numbers{{ q }}"><span>시급·비상금·넉넉 기준<small>시급 {{ "{:,}".format(s.user.hourly_wage) }}원, 비상금 {{ "{:,}".format(s.user.emergency_fund) }}원</small></span></a></li>
+  </ul>
+</section>
+
+<section class="card">
+  <ul class="menu">
+    <li><a href="/settings/history{{ q }}"><span>지난 기간 돌아보기</span></a></li>
+    <li><a class="danger" href="/settings/delete{{ q }}"><span>데이터 지우기</span></a></li>
+  </ul>
+</section>
+{% endblock %}

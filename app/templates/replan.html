@@ -86,10 +86,19 @@
     <span class="num">3</span>
     <div class="step-main">
       <h3>비상금에서 빌리기</h3>
+      {% if r.borrow > 0 %}
       <p><b>남은 {{ "{:,}".format(r.borrow) }}원</b>을 비상금({{ "{:,}".format(r.fund) }}원)에서 빌리고 {{ r.next_start.month }}/{{ r.next_start.day }}부터 갚아요</p>
       <p>다음 기간 하루 여유가 줄어요. 마지막에 써요.</p>
-      {% if r.left > 0 %}
-      <p>그래도 {{ "{:,}".format(r.left) }}원 모자라요 = 알바 약 {{ r.hours }}시간</p>
+      {% elif r.left == 0 %}
+      <p>비상금은 안 써도 돼요</p>
+      {% elif r.borrowed > 0 %}
+      <p>비상금에서 이미 {{ "{:,}".format(r.borrowed) }}원 빌렸어요 · {{ r.next_start.month }}/{{ r.next_start.day }}부터 갚아요</p>
+      {% else %}
+      <p>쓸 수 있는 비상금이 없어요</p>
+      {% endif %}
+      {# 아래 결과 카드가 없을 때(기간 마지막 날 밤)만 여기서 남는 모자란 돈을 보여준다 #}
+      {% if r.left > 0 and not r.after_stage %}
+      <p>그래도 {{ "{:,}".format(r.left) }}원 모자라요{% if r.hours %} = 알바 약 {{ r.hours }}시간{% endif %}</p>
       {% endif %}
     </div>
   </section>
@@ -99,8 +108,14 @@
   <section class="after-card">
     {{ wallet(r.after_stage, 60) }}
     <div>
+      {% if r.left > 0 %}
+      {# 아직 모자라면 '최소 생활비는 지켜요'라고 하지 않는다 #}
+      <p>이번 기간은 <span class="jua st-{{ r.after_stage }}">{{ r.after_stage }}</span>이에요</p>
+      <p class="small">이렇게 메워도 최소 생활비가 {{ "{:,}".format(r.left) }}원 모자라요{% if r.hours %} = 알바 약 {{ r.hours }}시간{% endif %}</p>
+      {% else %}
       <p>이번 기간은 <span class="jua st-{{ r.after_stage }}">{{ r.after_stage }}</span>, 최소 생활비는 지켜요</p>
-      <p class="small">{% if r.left > 0 %}그래도 {{ "{:,}".format(r.left) }}원 모자라요 = 알바 약 {{ r.hours }}시간{% else %}모자란 {{ "{:,}".format(r.short) }}원을 모두 메워요{% endif %}</p>
+      <p class="small">모자란 {{ "{:,}".format(r.short) }}원을 모두 메워요</p>
+      {% endif %}
     </div>
   </section>
   {% endif %}

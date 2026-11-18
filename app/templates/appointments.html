@@ -29,12 +29,15 @@
     {% endfor %}
   </ul>
   {% else %}
-  <p class="small">약속이 없어요</p>
+  <div class="empty">
+    <p>다가오는 약속이 없어요.</p>
+    <a class="btn btn-sub" href="#new">약속 넣기</a>
+  </div>
   {% endif %}
 </section>
 
 {# c) 새 약속 #}
-<section class="card">
+<section class="card" id="new">
   <div class="card-head"><b>새 약속</b></div>
   {% if day is none %}
   <!-- 1단계: 날짜를 먼저 고른다 -->

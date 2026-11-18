@@ -124,7 +124,65 @@ def test_이번_기간_쓸_수_있는_돈():
     assert (s["start"], s["end"], s["available"]) == (date(2026, 10, 30), date(2026, 11, 24), 540000)
 
 
-def test_복구_코드_모양():
-    code = setup.new_recovery_code()
-    assert len(code) == 14 and code.count("-") == 2
-    assert not set(code) & set("01OIL")
+# ---- 첫 설정 다섯 단계 (흐름 2) ----
+def test_첫_설정_초안은_예시로_채워져_있다():
+    d = setup.new_draft()
+    d["balance"] = "290000"
+    form = setup.draft_to_form(d)
+    data = setup.parse_step1(form)
+    assert [(i["name"], i["day_of_month"], i["amount"], i["is_main"]) for i in data["incomes"]] == [
+        ("알바비", 25, 500000, True), ("용돈", 1, 250000, False)]
+    assert [(f["name"], f["amount"]) for f in data["fixed"]] == [("통신비", 30000)]
+    routines = setup.parse_step2(form)
+    assert [(r["name"], r["weekdays"], r["meals_out"], r["meal_price"], r["round_trip_fare"])
+            for r in routines] == [("학교", [0, 1, 2, 3, 4], 2, 6000, 3100)]
+    # 금액을 안 바꾼 줄은 확인 화면에서 알려 준다
+    assert setup.example_left(d) == ["알바비", "용돈", "통신비"]
+    d["incomes"][0]["amount"] = "420000"
+    assert setup.example_left(d) == ["용돈", "통신비"]
+
+
+def test_첫_설정_줄_더하고_빼기():
+    d = setup.new_draft()
+    assert setup.apply_op(d, "add_income") and len(d["incomes"]) == 3
+    d["main"] = "1"
+    assert setup.apply_op(d, "del_income:0")  # 기준 줄 앞을 빼면 기준 번호도 당겨진다
+    assert d["main"] == "0" and d["incomes"][0]["name"] == "용돈"
+    assert setup.apply_op(d, "del_income:0")  # 기준 줄을 빼면 남은 첫 줄이 기준
+    assert d["main"] == "0" and len(d["incomes"]) == 1
+    assert setup.apply_op(d, "no_fixed") and d["fixed"] == []
+    assert setup.apply_op(d, "add_alba") and [r["name"] for r in d["routines"]] == ["학교", "알바"]
+    assert setup.apply_op(d, "no_routine") and d["routines"] == []
+    assert not setup.apply_op(d, "모르는_버튼")
+    # 최대 줄 수를 넘기지 않는다
+    for _ in range(10):
+        setup.apply_op(d, "add_fixed")
+    assert len(d["fixed"]) == setup.FIXED_ROWS
+
+
+def test_단계마다_검사():
+    d = setup.new_draft()
+    with pytest.raises(setup.FormError):
+        setup.check_step(d, 1)  # 잔액은 비어 있다
+    d["balance"] = "290000"
+    setup.check_step(d, 1)
+    d["main"] = ""
+    with pytest.raises(setup.FormError, match="기간 기준"):
+        setup.check_step(d, 2)
+    d["main"] = "0"
+    d["routines"][0]["wds"] = []  # 요일이 없으면 빈 줄로 본다
+    setup.check_step(d, 4)
+    assert setup.draft_data(d)["routines"] == []
+
+
+def test_깨진_초안은_처음부터():
+    assert setup.load_draft("{깨짐") == setup.new_draft()
+    assert setup.load_draft('{"incomes": "x", "balance": "5"}')["incomes"] == setup.new_draft()["incomes"]
+    assert setup.load_draft('{"incomes": "x", "balance": "5"}')["balance"] == "5"
+
+
+def test_요일_글자():
+    assert setup.weekday_text(["0", "1", "2", "3", "4"]) == "월~금"
+    assert setup.weekday_text([5, 6]) == "토·일"
+    assert setup.weekday_text([0, 2, 4]) == "월·수·금"
+    assert setup.weekday_text([]) == "요일 없음"

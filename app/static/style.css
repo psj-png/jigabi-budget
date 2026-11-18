@@ -167,6 +167,9 @@ a { color: var(--blue-dark); }
 .row-end b { display: block; }
 .check-row { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; min-height: 44px; cursor: pointer; }
 .btn-small { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--blue); background: #FFFFFF; color: var(--blue-dark); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+/* 한 줄에 버튼이 두 개일 때 (살 계획: 살게요 / 계획 취소) 세로로 쌓는다 */
+.row-btns { flex: none; display: flex; flex-direction: column; gap: 6px; }
+.row-btns .btn-small { width: 100%; }
 .sub-title { margin: 12px 0 0; font-size: 13px; font-weight: 700; color: var(--muted); }
 .field { display: block; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
 .field input { display: block; width: 100%; min-height: 44px; margin-top: 4px; padding: 0 12px; border: 1px solid var(--border); border-radius: 12px; background: #FFFFFF; color: var(--text); font: inherit; font-size: 15px; }
@@ -263,10 +266,9 @@ a { color: var(--blue-dark); }
 .date-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .date-grid label { font-size: 12px; color: var(--muted); }
 
-/* 복구 코드 */
+/* 가운데 정렬 화면 (에러) */
 .done { text-align: center; }
 .done .start-char { margin-top: 12px; }
-.code-card { margin: 16px 0 12px; text-align: center; font-size: 28px; font-weight: 700; letter-spacing: 0.12em; font-variant-numeric: tabular-nums; }
 .warn-yellow { margin-bottom: 20px; padding: 12px 14px; border-radius: 16px; background: #FFF4D6; color: #8A5A00; font-size: 14px; text-align: left; }
 
 /* 하단 메뉴가 없는 화면 */
@@ -328,3 +330,95 @@ body.start-page { background: #EEF4FF; }
 }
 .tabbar svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tabbar a[aria-current="page"] { color: var(--blue); font-weight: 700; }
+
+/* ---- 흐름 1: 시작 화면·예시 띠·'내 걸로 시작할까요?' 시트 ---- */
+.start-mine { margin-top: 8px; }
+.start-about { margin-top: 16px; }
+.demo-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -8px 0 12px; padding: 6px 6px 6px 12px; border-radius: 12px; background: #FFF4D6; color: #8A5A00; font-size: 13px; }
+.demo-bar a { flex: none; display: inline-flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 10px; background: #FFFFFF; color: #8A5A00; font-weight: 700; text-decoration: none; }
+.sheet-dim { position: fixed; inset: 0; z-index: 20; background: rgba(25, 31, 40, 0.45); }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; max-width: 420px; margin: 0 auto; padding: 12px 16px 24px; border-radius: 24px 24px 0 0; background: #FFFFFF; }
+.sheet::before { content: ""; display: block; width: 40px; height: 4px; margin: 0 auto 12px; border-radius: 2px; background: var(--border); }
+.sheet h2 { margin: 0 0 4px; font-size: 18px; }
+.sheet p { margin: 0 0 16px; color: var(--muted); }
+.sheet .btn + .btn { margin-top: 8px; }
+
+/* 되돌리기·저장 띠 (19, 22, 25) */
+.toast { position: fixed; left: 16px; right: 16px; bottom: 72px; z-index: 15; max-width: 388px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 2px 4px 2px 16px; border-radius: 14px; background: #191F28; color: #FFFFFF; font-size: 14px; }
+.toast-low { bottom: 16px; }
+.toast form { margin: 0; }
+.toast button { min-height: 44px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: #9DB8F2; font: inherit; font-weight: 700; cursor: pointer; }
+
+/* ---- 흐름 2: 첫 설정 다섯 단계 ---- */
+.default-go { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.top button.back { border: 0; padding: 0; background: none; cursor: pointer; }
+.row-title { display: flex; align-items: center; gap: 8px; }
+.row-title input { flex: 1; min-width: 0; }
+.example-tag { display: inline-block; margin: 6px 0 0 4px; padding: 2px 10px; border-radius: 999px; background: #FFF4D6; color: #8A5A00; font-size: 12px; }
+.hint-num { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
+.place-card b { font-size: 16px; }
+.place-card p { margin: 4px 0 0; }
+.two-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+.gap-top { margin-top: 8px; }
+.confirm { list-style: none; margin: 0; padding: 0; }
+.confirm li { display: flex; align-items: center; gap: 10px; min-height: 56px; border-top: 1px solid var(--line); }
+.confirm li:first-child { border-top: 0; }
+.confirm li span { flex: 1; min-width: 0; font-size: 14px; color: var(--muted); }
+.confirm li small { display: block; font-size: 12px; }
+.confirm li b { font-size: 16px; }
+
+/* ---- 흐름 3: 홈 ---- */
+.hero-top { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.hero-top svg { flex: none; }
+.hero-top .stage-line { margin: 2px 0 0; }
+.hero .big-money { margin-bottom: 0; }
+details.more { margin-top: 12px; border-top: 1px solid var(--line); }
+details.more summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; list-style: none; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--blue-dark); }
+details.more summary::-webkit-details-marker { display: none; }
+details.more summary::after { content: ""; width: 7px; height: 7px; margin-right: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+details.more[open] summary::after { transform: rotate(-135deg); }
+details.more[open] > summary { margin-bottom: 8px; }
+.hero details.more .chips { margin-bottom: 12px; }
+.alert-card { margin-bottom: 12px; padding: 14px 16px 6px; border-radius: 16px; background: #FDE2E4; color: #9F1239; }
+.alert-card b { display: block; font-size: 17px; }
+.alert-card a { display: inline-flex; align-items: center; min-height: 44px; color: #9F1239; font-weight: 700; }
+.notice { margin-bottom: 12px; padding: 12px 14px; border-radius: 16px; background: #FFF4D6; color: #8A5A00; font-size: 14px; }
+.notice a { color: #8A5A00; font-weight: 700; }
+.tonight h2 { margin: 0 0 6px; font-size: 16px; }
+.tonight .pick { margin: 4px 0 10px; }
+.tonight .label { display: block; margin-top: 4px; }
+.tonight .jua-chip { margin-top: 8px; }
+.result-line { margin: 4px 0; font-size: 18px; font-weight: 700; }
+
+/* 빈 상태 (20, 23) */
+.empty h2 { margin: 0 0 4px; font-size: 17px; }
+.empty p { margin: 0 0 12px; color: var(--muted); }
+
+/* ---- 흐름 6: 설정 ---- */
+.menu { list-style: none; margin: 0; padding: 0; }
+.menu li + li { border-top: 1px solid var(--line); }
+.menu a { display: flex; align-items: center; gap: 8px; min-height: 56px; color: var(--text); text-decoration: none; }
+.menu a span { flex: 1; min-width: 0; }
+.menu a small { display: block; font-size: 12px; color: var(--muted); }
+.menu a::after { content: ""; flex: none; width: 7px; height: 7px; margin-right: 6px; border-right: 2px solid var(--muted); border-top: 2px solid var(--muted); transform: rotate(45deg); }
+.menu a[aria-current="true"] { color: var(--blue-dark); font-weight: 700; }
+.menu .danger { color: #9F1239; }
+.edit-row + .edit-row { border-top: 1px solid var(--line); }
+.edit-row summary { display: flex; align-items: center; gap: 8px; min-height: 56px; list-style: none; cursor: pointer; }
+.edit-row summary::-webkit-details-marker { display: none; }
+.edit-row summary span { flex: 1; min-width: 0; }
+.edit-row summary small { display: block; font-size: 12px; color: var(--muted); }
+.edit-row form { padding: 4px 0 8px; }
+.edit-row .two-btns form { padding: 0; }
+.btn-danger { border-color: #9F1239; background: #FFFFFF; color: #9F1239; }
+.btn-danger.fill { background: #9F1239; color: #FFFFFF; }
+.formula { margin: 6px 0 4px; font-size: 14px; }
+.bars { display: flex; align-items: flex-end; gap: 2px; height: 96px; margin: 12px 0 4px; }
+.bars span { flex: 1; min-width: 3px; border-radius: 3px 3px 0 0; background: #93C5FD; }
+.bars span.none { height: 4px; background: var(--line); }
+.bars-axis { display: flex; justify-content: space-between; }
+
+/* 캡처로 담기 (R20) */
+.capture { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.capture .small { margin: 6px 0 0; }
+.field input.ai-filled { border-color: #9DB8F2; background: #F3F7FF; }

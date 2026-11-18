@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% from "_wallet.html" import wallet %}
+{% set no_nav = true %}
+{% set hide_demo_bar = true %}
+{% block nav %}{% endblock %}
+
+{% block content %}
+{% set q = ("?today=" ~ today_q) if today_q else "" %}
+{% set wd_labels = ["월", "화", "수", "목", "금", "토", "일"] %}
+{# 첫 설정 (흐름 2): 칸은 예시로 채워 두고, [다음]만 눌러도 끝까지 간다. 단계 사이 값은 draft 숨은 칸으로 넘긴다 #}
+<form method="post" action="{% if step == 5 %}/setup/done{% else %}/setup/step{% endif %}">
+  {# 엔터를 누르면 [다음]: 뒤로 버튼보다 먼저 있어야 한다 #}
+  <button type="submit" name="go" value="next" class="default-go" tabindex="-1" aria-hidden="true">다음</button>
+  <input type="hidden" name="draft" value="{{ draft_json }}">
+  <input type="hidden" name="step" value="{{ step }}">
+  {% if editing %}<input type="hidden" name="editing" value="1">{% endif %}
+  {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+
+  <div class="top">
+    {% if step > 1 %}
+    <button type="submit" class="back" name="go" value="back" formaction="/setup/step" formnovalidate aria-label="뒤로"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    {% else %}
+    <a class="back" href="/start{{ q }}" aria-label="뒤로"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+    {% endif %}
+    <span class="step-count">{{ step }} / 5</span>
+  </div>
+  <div class="progress" aria-hidden="true">{% for i in range(1, 6) %}<span{% if i <= step %} class="on"{% endif %}></span>{% endfor %}</div>
+
+  {% if error %}<div class="warn">{{ error }}</div>{% endif %}
+
+  {% if step == 1 %}
+  {# 1/5 지금 잔액: 모를 수 없는 값이라 이것만 비워 둔다 #}
+  <h1 class="split-title">지금 통장에 얼마 있나요?</h1>
+  <p class="top-sub" style="margin-top: 0">주로 쓰는 통장 앱에서 숫자만 보고 적으면 돼요.</p>
+  <section class="card">
+    <label class="label" for="balance">지금 잔액</label>
+    <div class="money-input"><input id="balance" type="number" name="balance" value="{{ d.balance }}" inputmode="numeric" required><span>원</span></div>
+    <p class="small">틀려도 괜찮아요. 밤 잔액을 적으면 그 숫자로 다시 맞춰요.</p>
+  </section>
+  <button type="submit" class="btn" name="go" value="next">다음</button>
+
+  {% elif step == 2 %}
+  {# 2/5 돈 들어오는 날 #}
+  <h1 class="split-title">돈이 들어오는 날을 알려 주세요</h1>
+  <p class="top-sub" style="margin-top: 0">기간 기준으로 고른 날부터 다음 그날 전까지를 한 기간으로 봐요.</p>
+  <section class="card">
+    {% for row in d.incomes %}
+    {% set i = loop.index0 %}
+    <div class="line-row">
+      <div class="row-title">
+        <input type="text" name="inc_name" value="{{ row.name }}" maxlength="20" placeholder="예: 알바비" aria-label="이름">
+        <button type="submit" class="btn-small" name="go" value="del_income:{{ i }}" formnovalidate>빼기</button>
+      </div>
+      <div class="pair">매달 <input class="day" type="number" name="inc_day" value="{{ row.day }}" min="1" max="31" aria-label="매달 며칠">일 <input class="amt" type="number" name="inc_amount" value="{{ row.amount }}" min="0" aria-label="금액">원</div>
+      <label class="main-pick"><input type="radio" name="main" value="{{ i }}"{% if d.main == i|string %} checked{% endif %}> 기간 기준</label>
+      {% if row in example_incomes %}<span class="example-tag">예시 값이에요. 내 금액으로 바꿔 주세요</span>{% endif %}
+    </div>
+    {% else %}
+    <p class="small">하나 이상 넣어 주세요.</p>
+    {% endfor %}
+    {% if d.incomes|length < rows_max.incomes %}<button type="submit" class="link-btn" name="go" value="add_income" formnovalidate>+ 하나 더</button>{% endif %}
+  </section>
+  <button type="submit" class="btn" name="go" value="next">다음</button>
+
+  {% elif step == 3 %}
+  {# 3/5 고정비: [없어요]를 큼직하게 #}
+  <h1 class="split-title">매달 꼭 나가는 돈이 있나요?</h1>
+  <p class="top-sub" style="margin-top: 0">통신비, 구독료처럼 날짜가 정해진 돈이에요.</p>
+  {% if d.fixed %}
+  <section class="card">
+    {% for row in d.fixed %}
+    {% set i = loop.index0 %}
+    <div class="line-row">
+      <div class="row-title">
+        <input type="text" name="fix_name" value="{{ row.name }}" maxlength="20" placeholder="예: 통신비" aria-label="이름">
+        <button type="submit" class="btn-small" name="go" value="del_fixed:{{ i }}" formnovalidate>빼기</button>
+      </div>
+      <div class="pair">매달 <input class="day" type="number" name="fix_day" value="{{ row.day }}" min="1" max="31" aria-label="매달 며칠">일 <input class="amt" type="number" name="fix_amount" value="{{ row.amount }}" min="0" aria-label="금액">원</div>
+      {% if row in example_fixed %}<span class="example-tag">예시 값이에요. 내 금액으로 바꿔 주세요</span>{% endif %}
+    </div>
+    {% endfor %}
+    {% if d.fixed|length < rows_max.fixed %}<button type="submit" class="link-btn" name="go" value="add_fixed" formnovalidate>+ 하나 더</button>{% endif %}
+  </section>
+  <button type="submit" class="btn" name="go" value="next">다음</button>
+  <button type="submit" class="btn btn-sub gap-top" name="go" value="no_fixed" formnovalidate>없어요</button>
+  {% else %}
+  <section class="card">
+    <p class="small">고정비 없이 계산해요.</p>
+    <button type="submit" class="link-btn" name="go" value="add_fixed" formnovalidate>+ 하나 넣기</button>
+  </section>
+  <button type="submit" class="btn" name="go" value="next">다음</button>
+  {% endif %}
+
+  {% elif step == 4 %}
+  {# 4/5 가는 곳: 접힌 카드로 보여주고 [이대로 할게요] / [고칠게요] #}
+  <h1 class="split-title">매주 가는 곳이 있나요?</h1>
+  <p class="top-sub" style="margin-top: 0">학교·알바처럼 밖에서 밥을 먹고 교통비가 드는 곳이에요. 여기서 나오는 밥값·교통비는 앱이 줄이지 않아요.</p>
+  {% if editing %}
+  {# 4/5-b 고치기: 칸마다 '보통 이 정도예요' #}
+  {% for r in d.routines %}
+  {% set i = loop.index0 %}
+  <section class="card">
+    <div class="row-title">
+      <input class="plain-input" type="text" name="r_name" value="{{ r.name }}" maxlength="20" placeholder="예: 학교" aria-label="이름">
+      <button type="submit" class="btn-small" name="go" value="del_routine:{{ i }}" formnovalidate>빼기</button>
+    </div>
+    <div class="wd-row">
+      {% for label in wd_labels %}
+      <label class="wd"><input type="checkbox" name="r_wd_{{ i }}" value="{{ loop.index0 }}"{% if loop.index0|string in r.wds %} checked{% endif %}><span>{{ label }}</span></label>
+      {% endfor %}
+    </div>
+    <div class="num-grid">
+      <label>밖에서 먹는 끼니 수<input type="number" name="r_meals" value="{{ r.meals }}" min="0" max="10"><span class="hint-num">보통 1~2끼</span></label>
+      <label>한 끼 가격 (원)<input type="number" name="r_price" value="{{ r.price }}" min="0"><span class="hint-num">학식은 보통 5,000~7,000원</span></label>
+      <label>왕복 교통비 (원)<input type="number" name="r_fare" value="{{ r.fare }}" min="0"><span class="hint-num">버스·지하철 왕복 보통 3,000원 안팎</span></label>
+    </div>
+    <details class="more">
+      <summary>자세히 (시작일·끝나는 날)</summary>
+      <div class="date-grid">
+        <label>시작일 (비워도 돼요)<input type="date" name="r_start" value="{{ r.start }}"></label>
+        <label>끝나는 날 (비워도 돼요)<input type="date" name="r_end" value="{{ r.end }}"></label>
+      </div>
+    </details>
+  </section>
+  {% else %}
+  <section class="card"><p class="small">가는 곳이 없어요. 최소 생활비를 0원으로 계산해요.</p></section>
+  {% endfor %}
+  {% if d.routines|length < rows_max.routines %}<button type="submit" class="link-btn" name="go" value="add_routine" formnovalidate>+ 가는 곳 더하기</button>{% endif %}
+  <button type="submit" class="btn" name="go" value="next">다음</button>
+  {% else %}
+  {% for r in d.routines %}
+  <section class="card place-card">
+    <b>{{ r.name }}</b>
+    <p class="small">{{ weekday_text(r.wds) }} · {% if r.meals|int > 0 %}{{ r.meals }}끼 {{ "{:,}".format(r.price|int) }}원{% else %}밖에서 안 먹어요{% endif %} · 왕복 {{ "{:,}".format(r.fare|int) }}원</p>
+  </section>
+  {% endfor %}
+  {% if d.routines %}
+  <div class="two-btns">
+    <button type="submit" class="btn" name="go" value="next">이대로 할게요</button>
+    <button type="submit" class="btn btn-sub" name="go" value="edit" formnovalidate>고칠게요</button>
+  </div>
+  {% else %}
+  <section class="card"><p class="small">가는 곳이 없어요. 최소 생활비를 0원으로 계산해요.</p></section>
+  <button type="submit" class="btn" name="go" value="next">다음</button>
+  {% endif %}
+  {% if not has_alba and d.routines|length < rows_max.routines %}<button type="submit" class="link-btn" name="go" value="add_alba" formnovalidate>+ 알바도 있어요</button>{% endif %}
+  {% if d.routines %}<button type="submit" class="link-btn" name="go" value="no_routine" formnovalidate>가는 곳이 없어요</button>{% endif %}
+  {% endif %}
+
+  {% else %}
+  {# 5/5 확인: 이렇게 계산할게요. 줄마다 [고치기] #}
+  <h1 class="split-title">이렇게 계산할게요</h1>
+  <p class="top-sub" style="margin-top: 0">이번 기간 {{ look.start.month }}/{{ look.start.day }}~{{ look.end.month }}/{{ look.end.day }} · {{ look.days_left }}일</p>
+  {% if examples %}
+  <div class="notice">아직 예시 값이에요: {{ examples|join(", ") }}. 내 금액과 다르면 고쳐 주세요.</div>
+  {% endif %}
+  <section class="card">
+    <ul class="confirm">
+      <li><span>지금 잔액</span><b>{{ "{:,}".format(look.balance) }}원</b><button type="submit" class="btn-small" name="go" value="to:1" formaction="/setup/step" formnovalidate>고치기</button></li>
+      <li><span>기간 안에 들어올 돈</span><b>{{ "{:,}".format(look.income) }}원</b><button type="submit" class="btn-small" name="go" value="to:2" formaction="/setup/step" formnovalidate>고치기</button></li>
+      <li><span>고정비</span><b>{{ "{:,}".format(look.fixed) }}원</b><button type="submit" class="btn-small" name="go" value="to:3" formaction="/setup/step" formnovalidate>고치기</button></li>
+      <li><span>최소 생활비<small>밥값·교통비, 앱이 줄이지 않아요</small></span><b>{{ "{:,}".format(look.min_living) }}원</b><button type="submit" class="btn-small" name="go" value="to:4" formaction="/setup/step" formnovalidate>고치기</button></li>
+    </ul>
+  </section>
+  <section class="card wallet-card">
+    {{ wallet(look.stage, 72) }}
+    <div class="wallet-text">
+      <span class="stage-chip stage-{{ look.stage }}">{{ look.stage }}</span>
+      <p class="daily">하루 여유 <b>{{ "{:,}".format(look.daily)|replace("-", "−") }}원</b></p>
+      <p class="daily">오늘 쓸 수 있는 돈 <b>{{ "{:,}".format(look.budget)|replace("-", "−") }}원</b></p>
+    </div>
+  </section>
+  <p class="center-note">완료를 누르면 이 기기, 이 브라우저에 저장돼요.</p>
+  <button type="submit" class="btn">완료</button>
+  {% endif %}
+</form>
+{% endblock %}

@@ -26,6 +26,10 @@ def ensure_period(conn, user_id, day):
     if not main:
         return None
     new_start, new_end, _ = calc.period(day, main[0]["day_of_month"])
+    # 기간 기준을 바꾼 뒤에는 앞 기간과 겹치지 않게, 앞 기간 다음 날부터 시작한다 (R15)
+    last = queries.get_prev_period(conn, user_id, day + timedelta(days=1))
+    if last is not None and last["end_date"] >= new_start:
+        new_start = last["end_date"] + timedelta(days=1)
     before = queries.get_latest_balance_log(conn, user_id, new_start - timedelta(days=1))
     if before is None:
         return None
@@ -56,9 +60,6 @@ def make_home(conn, user_id, today, before_night=False):
     if user is None or not main:
         return {"ready": False}
 
-    # 기간 기준 수입일은 주 수입의 날짜
-    income_day = main[0]["day_of_month"]
-
     per = ensure_period(conn, user_id, today)
     if per is None:
         return {"ready": False}
@@ -88,8 +89,9 @@ def make_home(conn, user_id, today, before_night=False):
             missed_days = (today - per["start_date"]).days
 
     # 남은 날은 지금처럼 오늘부터(밤 기록이 있으면 내일부터)
-    start, end, days_left = calc.period(today, income_day, app_start=per["start_date"],
-                                        logged_tonight=logged)
+    # 끝나는 날은 기간 표의 값: 기간 기준을 설정에서 바꿔도 지금 기간은 그대로 (R15)
+    end = per["end_date"]
+    days_left = (end - calc.first_day(today, logged)).days + 1  # 마지막 날에 기록했으면 0
     first = count_from  # 안 적은 날은 최소 생활비와 약속만큼 썼다고 보고 여유 돈에서 뺀다 (R10)
 
     routines = queries.get_routines(conn, user_id)
@@ -138,7 +140,22 @@ def make_home(conn, user_id, today, before_night=False):
         "today_min": None,
         "today_appt": None,
         "stage_line": None,
+        # 남은 기간 막대 제목의 첫날: 오늘 밤 잔액을 적었으면 내일 (기간 마지막 날 밤은 오늘)
+        "bar_from": today + timedelta(days=1) if logged and days_left > 0 else today,
+        # 기간 끝 카드(18)와 가는 곳 안내(17)에 쓰는 값
+        "period_start": per["start_date"],
+        "no_places": not any(r["end_date"] is None or r["end_date"] >= today for r in routines),
     }
+    # 남은 기간 막대 (R7-1): 안 적은 날이 있으면 그날들을 R10대로 메운 '오늘 아침 예상 잔액'부터 센다
+    # 여유 돈·하루 여유는 그대로이고, 칸을 모두 빼면 여유 돈과 같다
+    if not logged and first < today:
+        est = calc.estimate_balance(balance, first, today - timedelta(days=1),
+                                    routines, fixed, appts, incomes, items, loans)
+        home["available"] = est + calc.incomes_sum(today, end, incomes) + calc.loans_sum(today, end, loans)
+        home["fixed"] = calc.monthly_sum(today, end, fixed)
+        home["appt"] = calc.appointments_sum(today, end, appts)
+        home["min_living"] = calc.min_living(today, end, routines)
+        home["items_out"] = calc.purchases_sum(today, today, items) + calc.planned_sum(date.min, end, items)
     if daily is not None:
         home["stage"] = calc.stage(daily, user["comfort_daily"])
         # 밤 잔액을 적었으면 내일 날짜로 R7을 계산한다

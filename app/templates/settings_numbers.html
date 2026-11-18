@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% set active_tab = "settings" %}
+
+{% block content %}
+{% set q = ("?today=" ~ today_q) if today_q else "" %}
+{% set qa = ("&today=" ~ today_q) if today_q else "" %}
+<div class="top">
+  <a class="back" href="/settings{{ q }}" aria-label="뒤로"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+  <h1>시급·비상금·넉넉 기준</h1>
+</div>
+
+{% if error %}<div class="warn">{{ error }}</div>{% endif %}
+<form method="post" action="/settings/numbers" class="card">
+  {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+  <label class="field">시급 (원)<input type="number" name="hourly_wage" value="{{ user.hourly_wage }}" min="1" required></label>
+  <p class="hint">모자란 돈이나 물건값을 '알바 몇 시간'으로 바꿔 볼 때 써요.</p>
+  <label class="field">비상금 (원)<input type="number" name="emergency_fund" value="{{ user.emergency_fund }}" min="0" required></label>
+  <p class="hint">모자랄 때 빌려 쓰는 돈이에요. 빌린 돈은 다음 기간 첫날 갚아요.</p>
+  <label class="field">넉넉 기준 (원)<input type="number" name="comfort_daily" value="{{ user.comfort_daily }}" min="1000" required></label>
+  <p class="hint">하루 여유가 이만큼이면 지갑이가 빵빵, 절반이면 든든이에요.</p>
+  <button type="submit" class="btn">저장</button>
+</form>
+{% endblock %}

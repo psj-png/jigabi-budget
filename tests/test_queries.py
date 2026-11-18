@@ -74,6 +74,29 @@ def test_홈_화면_값(conn):
     assert (h["days_left"], h["free"], h["daily"], h["stage"]) == (22, 224100, 10100, "빵빵")
 
 
+def test_홈_남은_기간_막대는_오늘부터_센다(conn):
+    from app.home import make_home
+
+    def parts(h):
+        return (h["available"], h["fixed"], h["appt"], h["min_living"], h["free"])
+
+    # 10/30 밤 기록 뒤라 막대 제목은 내일(10/31)부터
+    assert make_home(conn, USER_ID, TODAY)["bar_from"] == date(2026, 10, 31)
+
+    # 11/3: 10/31~11/2를 R10대로 메운 예상 잔액 512,900부터. 11/5·11/12 고정지출과 11/7 약속은 아직 남았다
+    h = make_home(conn, USER_ID, date(2026, 11, 3))
+    assert parts(h) == (512900, 43900, 30000, 214900, 224100)
+    assert h["bar_from"] == date(2026, 11, 3)
+
+    # 11/16: 고정지출·약속은 이미 지나서 0, 남은 9일 최소 생활비 96,800 (예전엔 10/31부터 세서 534,200)
+    h = make_home(conn, USER_ID, date(2026, 11, 16))
+    assert h["missed_days"] == 16
+    assert parts(h) == (320900, 0, 0, 96800, 224100)
+    assert (h["days_left"], h["daily"], h["stage"]) == (9, 24900, "빵빵")
+    for h in [make_home(conn, USER_ID, date(2026, 11, d)) for d in (3, 16)]:
+        assert h["available"] - h["fixed"] - h["appt"] - h["min_living"] - h["repay"] - h["items_out"] == h["free"]
+
+
 def test_홈_화면_기록이_하나도_없을_때(conn):
     from app.home import make_home
 
@@ -235,8 +258,6 @@ def test_get_user_id(conn):
 
 
 # ---- 첫 설정 저장 (새 사용자를 만들고 끝나면 지운다) ----
-import hashlib
-
 from app import setup
 
 SEED_LIKE = {
@@ -269,7 +290,7 @@ def test_첫_설정_저장(conn):
     from app.home import make_home
 
     today = date(2026, 10, 30)
-    user_id, public_id, code = setup.create_account(conn, SEED_LIKE, today)
+    user_id, public_id = setup.create_account(conn, SEED_LIKE, today)
     try:
         assert user_id != USER_ID
 
@@ -288,10 +309,7 @@ def test_첫_설정_저장(conn):
         h = make_home(conn, user_id, today)
         assert (h["free"], h["daily"], h["stage"]) == (229900, 8800, "든든")
 
-        # d) 복구 코드의 해시와 public_id
-        with conn.cursor() as cur:
-            cur.execute("SELECT recovery_hash FROM users WHERE user_id = %s", (user_id,))
-            assert cur.fetchone()["recovery_hash"] == hashlib.sha256(code.encode("utf-8")).hexdigest()
+        # d) 쿠키에 넣는 public_id로 다시 찾는다
         assert queries.get_user_id(conn, public_id) == user_id
         # 다른 사용자의 데이터와 섞이지 않는다
         assert len(queries.get_appointments(conn, user_id)) == 1
@@ -538,6 +556,32 @@ def test_계획한_물건은_날짜가_지나도_사거나_취소할_때까지_�
     assert make_home(conn, USER_ID, date(2026, 11, 27))["free"] == 228000
 
 
+def test_계획한_물건은_장바구니에서_바로_산다(conn, clean_purchases):
+    # 사기로 한 날이 지나면 홈이 '장바구니에서 [살게요]'라고 안내한다: 계획 취소 없이 바로 살 수 있어야 한다
+    from jinja2 import Environment, FileSystemLoader
+    from app.home import make_home
+
+    ids = item_ids(conn)
+    롱패딩 = ids["롱패딩"]
+    purchase.save_split(conn, USER_ID, date(2026, 10, 31), list(ids.values()))
+    make_home(conn, USER_ID, date(2026, 11, 25))  # 새 기간 만들기
+    assert balance_page.save(conn, USER_ID, date(2026, 11, 26), date(2026, 11, 26), 416900, 0) is None
+    today = date(2026, 11, 27)
+
+    # '살 계획' 줄에 [살게요] 폼이 있다 (아무것도 체크 안 했으니 /cart/buy 폼은 이것뿐)
+    cart_html = Environment(loader=FileSystemLoader("app/templates")).get_template("cart.html")
+    html = cart_html.render(c=cart.make_cart(conn, USER_ID, today, []), stages=cart.STAGES, today_q="2026-11-27")
+    assert html.count('action="/cart/buy"') == 1
+    assert f'<input type="hidden" name="item" value="{롱패딩}">' in html
+
+    # 계획한 그대로 산다: 여유 돈은 계획일 때와 같은 228,000, 사기로 한 날 안내는 사라진다
+    assert purchase.buy_now(conn, USER_ID, [롱패딩], today) == 1
+    it = [i for i in queries.get_items(conn, USER_ID) if i["item_id"] == 롱패딩][0]
+    assert (it["status"], it["bought_date"]) == ("bought", today)
+    h = make_home(conn, USER_ID, today)
+    assert h["free"] == 228000 and h["due_items"] == []
+
+
 def test_반품은_산_날_빼고_7일_안(conn, clean_purchases):
     ids = item_ids(conn)
     purchase.buy_now(conn, USER_ID, [ids["니트"]], date(2026, 10, 31))
@@ -548,7 +592,7 @@ def test_반품은_산_날_빼고_7일_안(conn, clean_purchases):
 
 def test_남의_물건은_사거나_반품할_수_없다(conn, clean_purchases):
     ids = item_ids(conn)
-    other, _, _ = setup.create_account(conn, SEED_LIKE, date(2026, 10, 30))
+    other, _ = setup.create_account(conn, SEED_LIKE, date(2026, 10, 30))
     try:
         # 다른 사용자가 seed 사용자의 item_id로 사려고 해도 아무것도 안 바뀐다
         assert purchase.buy_now(conn, other, list(ids.values()), date(2026, 10, 31)) == 0
@@ -645,7 +689,7 @@ def test_다시_짜기_범위_밖의_금액과_남의_약속은_막는다(conn, 
     assert replan.save_replan(conn, USER_ID, today, {appt_id: 30001}) is not None   # 약속 금액 초과
     assert replan.save_replan(conn, USER_ID, today, {appt_id: -1}) is not None      # 음수
 
-    other, _, _ = setup.create_account(conn, SEED_LIKE, date(2026, 10, 30))
+    other, _ = setup.create_account(conn, SEED_LIKE, date(2026, 10, 30))
     try:
         queries.insert_appointment(conn, other, date(2026, 11, 7), "남의 약속", 30000, 0)
         other_appt = queries.get_appointments(conn, other)[0]["appt_id"]
@@ -694,3 +738,166 @@ def test_홈에_모자라면_다시_짜기_링크가_보인다(conn, clean_repla
     assert replan.save_replan(conn, USER_ID, today, {appt_id: 10000}) is None
     html = home_html.render(h=make_home(conn, USER_ID, today), today_q="2026-10-31")
     assert "모자라요" not in html
+
+
+def test_다시_짜기_비상금을_이미_빌렸으면_그렇게_보여준다(conn, clean_replan):
+    from jinja2 import Environment, FileSystemLoader
+
+    replan_html = Environment(loader=FileSystemLoader("app/templates")).get_template("replan.html")
+    today = date(2026, 10, 31)
+    purchase.buy_now(conn, USER_ID, list(item_ids(conn).values()), today)  # 4개 386,000
+
+    # 처음: 161,900 모자람 -> 술자리 10,000 줄이고 비상금 100,000을 빌려도 51,900 모자람
+    r = replan.make_replan(conn, USER_ID, today)
+    assert (r["short"], r["borrow"], r["borrowed"], r["left"]) == (161900, 100000, 0, 51900)
+    html = replan_html.render(r=r, today_q="2026-10-31", now=today)
+    assert "남은 100,000원</b>을 비상금(100,000원)에서 빌리고 11/25부터 갚아요" in html
+    assert "이렇게 메워도 최소 생활비가 51,900원 모자라요" in html
+    assert "최소 생활비는 지켜요" not in html  # 아직 모자란데 지킨다고 하지 않는다
+
+    # 저장한 뒤 다시 열면 비상금은 0원: '남은 0원을 비상금(0원)에서' 대신 이미 빌린 돈을 보여준다
+    appt_id = r["rows"][0]["appt"]["appt_id"]
+    assert replan.save_replan(conn, USER_ID, today, {appt_id: 10000}) is None
+    r = replan.make_replan(conn, USER_ID, today)
+    assert (r["short"], r["fund"], r["borrow"], r["borrowed"]) == (51900, 0, 0, 100000)
+    html = replan_html.render(r=r, today_q="2026-10-31", now=today)
+    assert "비상금에서 이미 100,000원 빌렸어요 · 11/25부터 갚아요" in html
+    assert "남은 0원" not in html
+
+
+
+# ---- 흐름 2·3·4·6 ----
+def test_첫_설정_확인_숫자는_첫날_홈과_같다(conn):
+    # R17: 5/5 확인 화면의 숫자 = 계정을 만든 첫날 홈
+    from app.home import make_home
+
+    look = setup.preview(SEED_LIKE, date(2026, 10, 30))
+    assert (look["free"], look["daily"], look["stage"], look["budget"]) == (259900, 9900, "든든", 9900)
+    user_id, _ = setup.create_account(conn, SEED_LIKE, date(2026, 10, 30))
+    try:
+        h = make_home(conn, user_id, date(2026, 10, 30))
+        assert (look["free"], look["daily"], look["stage"], look["budget"], look["days_left"], look["end"]) == (
+            h["free"], h["daily"], h["stage"], h["budget"], h["days_left"], h["end"])
+        # 첫날에는 '어젯밤' 칸이 없다 (앱을 시작하기 전 날)
+        assert balance_page.make_card(conn, user_id, date(2026, 10, 30), date(2026, 10, 30))["other_day"] is None
+    finally:
+        queries.delete_user(conn, user_id)
+
+
+def test_쓴_돈으로_적기(conn, clean_purchases):
+    # R10-1: 10/30은 시작 잔액 290,000에서 5,800원 → seed 10/30 밤 잔액과 같다
+    assert balance_page.guess_balance(conn, USER_ID, date(2026, 10, 30), 5800) == (284200, 0)
+    # 11/3: 10/31~11/2는 R10대로 21,300원, 11/1 용돈 250,000은 들어왔다고 본다
+    assert balance_page.guess_balance(conn, USER_ID, date(2026, 11, 3), 10000) == (502900, 250000)
+    # 그대로 저장하면 그날 쓴 돈은 안 적은 날 몫까지 합친 31,300
+    assert balance_page.save(conn, USER_ID, date(2026, 11, 3), date(2026, 11, 3), 502900, 250000) is None
+    assert queries.get_balance_log(conn, USER_ID, date(2026, 11, 3))["spent"] == 31300
+
+
+def test_밤_잔액_카드(conn, clean_purchases):
+    # 14: 10/30은 이미 적어서 결과. 10/31은 아직이라 적기 전이고, 어젯밤(10/30)으로 바꿔 적을 수 있다
+    card = balance_page.make_card(conn, USER_ID, date(2026, 10, 30), date(2026, 10, 30))
+    assert card["mode"] == "result"
+    assert (card["result"]["left"], card["result"]["after_budget"], card["result"]["stage_after"]) == (3000, 12000, "든든")
+    card = balance_page.make_card(conn, USER_ID, date(2026, 10, 31), date(2026, 10, 31))
+    assert (card["mode"], card["other_day"]) == ("input", date(2026, 10, 30))
+    assert balance_page.make_card(conn, USER_ID, date(2026, 10, 31), date(2026, 10, 31), guess=284200)["mode"] == "confirm"
+    assert balance_page.make_card(conn, USER_ID, date(2026, 10, 30), date(2026, 10, 30), edit=True)["mode"] == "input"
+
+
+def test_산_것과_반품을_되돌린다(conn, clean_purchases):
+    # R18
+    from app.home import make_home
+
+    ids = item_ids(conn)
+    today = date(2026, 10, 31)
+    purchase.buy_now(conn, USER_ID, [ids["니트"]], today)
+    assert make_home(conn, USER_ID, today)["free"] == 224100 - 49000
+    assert purchase.unbuy_items(conn, USER_ID, [ids["니트"]], today) == 1
+    assert make_home(conn, USER_ID, today)["free"] == 224100
+    knit = [i for i in queries.get_items(conn, USER_ID) if i["item_id"] == ids["니트"]][0]
+    assert (knit["status"], knit["bought_date"]) == ("wish", None)
+
+    # 다른 날 산 것은 되돌리지 않는다
+    purchase.buy_now(conn, USER_ID, [ids["목도리"]], today)
+    assert purchase.unbuy_items(conn, USER_ID, [ids["목도리"]], date(2026, 11, 1)) == 0
+    # 반품 되돌리기: 그날 반품한 것만
+    assert purchase.return_item(conn, USER_ID, ids["목도리"], today)
+    assert purchase.unreturn_item(conn, USER_ID, ids["목도리"], today)
+    assert make_home(conn, USER_ID, today)["free"] == 224100 - 29000
+    assert not purchase.unreturn_item(conn, USER_ID, ids["목도리"], today)  # 이미 산 것
+
+
+def test_설정에서_돈_들어오는_날_바꾸기(conn):
+    # R15: 기간 기준을 바꿔도 지금 기간은 그대로, 다음 기간은 앞 기간 다음 날부터 새 날짜로
+    from app.home import make_home
+
+    user_id, _ = setup.create_account(conn, SEED_LIKE, date(2026, 10, 30))
+    try:
+        rows = queries.list_incomes(conn, user_id)
+        main = [r for r in rows if r["is_main"]][0]
+        pocket = [r for r in rows if not r["is_main"]][0]
+        assert queries.delete_income(conn, user_id, main["income_id"]) == 0  # 기간 기준은 못 뺀다
+        queries.update_income(conn, user_id, pocket["income_id"], "용돈", 1, 300000)
+        queries.insert_income(conn, user_id, "장학금", 10, 100000)
+        assert [(r["name"], r["amount"]) for r in queries.list_incomes(conn, user_id)] == [
+            ("알바비", 420000), ("용돈", 300000), ("장학금", 100000)]
+
+        assert queries.set_main_income(conn, user_id, pocket["income_id"])
+        assert make_home(conn, user_id, date(2026, 10, 30))["end"] == date(2026, 11, 24)
+        assert balance_page.save(conn, user_id, date(2026, 11, 24), date(2026, 11, 24), 100000, 0) is None
+        h = make_home(conn, user_id, date(2026, 11, 25))
+        assert (h["end"], h["days_left"]) == (date(2026, 11, 30), 6)
+        assert queries.delete_income(conn, user_id, main["income_id"]) == 1  # 이제 기준이 아니라 뺄 수 있다
+    finally:
+        queries.delete_user(conn, user_id)
+
+
+def test_설정에서_가는_곳을_고치면_오늘부터(conn):
+    # R15: 예전 줄은 어제로 끝내고 새 줄은 오늘부터
+    from app import settings
+
+    user_id, _ = setup.create_account(conn, SEED_LIKE, date(2026, 10, 30))
+    try:
+        school = [r for r in queries.list_routines(conn, user_id) if r["name"] == "학교"][0]
+        alba = [r for r in queries.list_routines(conn, user_id) if r["name"] == "알바"][0]
+        p = settings.make_places(conn, user_id, date(2026, 10, 30))
+        assert p["total"] == 236200
+        assert [(x["name"], x["days"], x["per_day"]) for x in p["parts"]] == [("학교", 14, 15100), ("알바", 8, 3100)]
+
+        today = date(2026, 11, 16)
+        assert settings.edit_place(conn, user_id, school["routine_id"], dict(school, meals_out=1), today)
+        routines = queries.get_routines(conn, user_id)
+        assert calc.min_living(date(2026, 10, 30), date(2026, 11, 15), routines) == 139400
+        assert calc.min_living(today, date(2026, 11, 24), routines) == 96800 - 6 * 6000
+
+        assert settings.end_place(conn, user_id, alba["routine_id"], today)  # 알바는 11/15까지
+        assert calc.min_living(today, date(2026, 11, 24), queries.get_routines(conn, user_id)) == 54600
+        names = [r["name"] for r in settings.make_places(conn, user_id, today)["places"]]
+        assert names == ["학교"]
+    finally:
+        queries.delete_user(conn, user_id)
+
+
+def test_설정_숫자와_데이터_지우기(conn):
+    from app import settings
+
+    user_id, public_id = setup.create_account(conn, SEED_LIKE, date(2026, 10, 30))
+    queries.update_user_numbers(conn, user_id, 20000, 11000, 50000)
+    assert queries.get_user(conn, user_id) == {"comfort_daily": 20000, "emergency_fund": 50000,
+                                               "hourly_wage": 11000}
+    settings.delete_account(conn, user_id)
+    assert queries.get_user_id(conn, public_id) is None
+    assert count(conn, "SELECT COUNT(*) FROM routines WHERE user_id = %s", (user_id,)) == 0
+
+
+def test_지난_기간_돌아보기(conn):
+    from app import settings
+
+    hist = settings.make_history(conn, USER_ID, date(2026, 10, 31))
+    assert len(hist["rows"]) == 1
+    s = hist["sel"]
+    assert (s["start"], s["end"], s["days"], s["nights"], s["spent"]) == (
+        date(2026, 10, 30), date(2026, 11, 24), 2, 1, 5800)
+    assert [b["spent"] for b in hist["bars"]] == [5800, None]
+    assert hist["diff"] is None

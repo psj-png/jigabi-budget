@@ -2,8 +2,8 @@
 SET NAMES utf8mb4;
 USE jigabi;
 
-INSERT INTO users (public_id, recovery_hash, comfort_daily, hourly_wage, emergency_fund)
-VALUES ('3f6b2a1c-7d4e-4b8a-9c2d-1e5f6a7b8c9d', SHA2('DEMO-RECOVERY-CODE', 256), 10000, 10320, 100000);
+INSERT INTO users (public_id, comfort_daily, hourly_wage, emergency_fund)
+VALUES ('3f6b2a1c-7d4e-4b8a-9c2d-1e5f6a7b8c9d', 10000, 10320, 100000);
 SET @uid = LAST_INSERT_ID();
 
 INSERT INTO routines (user_id, name, round_trip_fare, meals_out, meal_price, start_date, end_date)

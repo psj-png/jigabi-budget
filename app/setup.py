@@ -1,20 +1,15 @@
-# 첫 설정: 폼 값 검사, 복구 코드 만들기, 저장. home.py·balance.py처럼 화면과 DB를 잇는다
-import hashlib
-import secrets
+# 첫 설정: 폼 값 검사와 저장. home.py·balance.py처럼 화면과 DB를 잇는다
+import json
 import uuid
 from datetime import date
 
 from app import calc, queries
 
-INCOME_ROWS = 3   # 돈 들어오는 날 줄 수
-FIXED_ROWS = 4    # 고정비 줄 수
-ROUTINE_ROWS = 3  # 가는 곳 줄 수
+# 화면에서 [+ 하나 더]로 늘릴 수 있는 최대 줄 수
+INCOME_ROWS = 5   # 돈 들어오는 날
+FIXED_ROWS = 6    # 고정비
+ROUTINE_ROWS = 4  # 가는 곳
 MAX_MONEY = 1_000_000_000
-
-# 1단계 폼 칸 이름. 2단계로 넘어갈 때 hidden으로 다시 넣는다
-STEP1_FIELDS = ["balance", "inc_name", "inc_day", "inc_amount", "main",
-                "fix_name", "fix_day", "fix_amount",
-                "comfort_daily", "hourly_wage", "emergency_fund"]
 
 NO_INCOME = "돈 들어오는 날을 하나 이상 넣고, 기간 기준을 골라 주세요"
 
@@ -158,18 +153,191 @@ def summary(data, today):
             "available": data["balance"] + income}
 
 
-def new_recovery_code():
-    # 사람이 옮겨 적기 쉽게: 헷갈리는 글자(0 O 1 I L)를 빼고 4자씩 끊는다
-    letters = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
-    code = "".join(secrets.choice(letters) for _ in range(12))
-    return "-".join([code[0:4], code[4:8], code[8:12]])
-
-
 def create_account(conn, data, today):
-    # 한 트랜잭션으로 저장하고 (user_id, public_id, 복구 코드)를 돌려준다
+    # 한 트랜잭션으로 저장하고 (user_id, public_id)를 돌려준다. public_id는 쿠키에 넣는 익명 ID (R19)
     public_id = str(uuid.uuid4())
-    code = new_recovery_code()
-    recovery_hash = hashlib.sha256(code.encode("utf-8")).hexdigest()
     start, end = first_period(data, today)
-    user_id = queries.create_account(conn, data, public_id, recovery_hash, start, end)
-    return user_id, public_id, code
+    user_id = queries.create_account(conn, data, public_id, start, end)
+    return user_id, public_id
+
+
+# ---- 첫 설정 다섯 단계 (흐름 2): 묻지 말고 채워 놓고, 고치게 한다 ----
+# 단계 사이 값은 화면의 숨은 칸(draft, JSON)으로 넘기고, 끝에서 parse_step1·parse_step2로 다시 검사한다
+LAST_STEP = 5
+EXAMPLE_INCOMES = [{"name": "알바비", "day": "25", "amount": "500000"},
+                   {"name": "용돈", "day": "1", "amount": "250000"}]
+EXAMPLE_FIXED = [{"name": "통신비", "day": "5", "amount": "30000"}]
+SCHOOL = {"name": "학교", "wds": ["0", "1", "2", "3", "4"], "meals": "2", "price": "6000",
+          "fare": "3100", "start": "", "end": ""}
+ALBA = {"name": "알바", "wds": ["5", "6"], "meals": "0", "price": "0", "fare": "3100",
+        "start": "", "end": ""}
+WEEKDAYS = "월화수목금토일"
+
+
+def new_draft():
+    return {"balance": "", "incomes": [dict(r) for r in EXAMPLE_INCOMES], "main": "0",
+            "fixed": [dict(r) for r in EXAMPLE_FIXED], "routines": [dict(SCHOOL, wds=list(SCHOOL["wds"]))],
+            "comfort_daily": "10000", "hourly_wage": "10320", "emergency_fund": "0"}
+
+
+def load_draft(text):
+    # 화면에서 돌아온 JSON. 깨졌거나 모양이 다르면 그 부분은 처음 값으로
+    base = new_draft()
+    try:
+        got = json.loads(text or "")
+    except ValueError:
+        return base
+    if not isinstance(got, dict):
+        return base
+    for key in base:
+        if key in ("incomes", "fixed", "routines"):
+            rows = got.get(key)
+            if isinstance(rows, list) and all(isinstance(r, dict) for r in rows):
+                base[key] = rows
+        elif isinstance(got.get(key), str):
+            base[key] = got[key]
+    return base
+
+
+class DraftForm:
+    # parse_step1·parse_step2가 읽는 request.form() 모양 (get, getlist)
+    def __init__(self, pairs):
+        self.pairs = pairs
+
+    def get(self, name, default=None):
+        for k, v in self.pairs:
+            if k == name:
+                return v
+        return default
+
+    def getlist(self, name):
+        return [v for k, v in self.pairs if k == name]
+
+
+def draft_to_form(d):
+    pairs = [("balance", d["balance"]), ("main", d["main"]), ("comfort_daily", d["comfort_daily"]),
+             ("hourly_wage", d["hourly_wage"]), ("emergency_fund", d["emergency_fund"])]
+    for r in d["incomes"]:
+        pairs += [("inc_name", r.get("name", "")), ("inc_day", r.get("day", "")),
+                  ("inc_amount", r.get("amount", ""))]
+    for r in d["fixed"]:
+        pairs += [("fix_name", r.get("name", "")), ("fix_day", r.get("day", "")),
+                  ("fix_amount", r.get("amount", ""))]
+    for i, r in enumerate(d["routines"]):
+        pairs += [("r_name", r.get("name", "")), ("r_meals", r.get("meals", "")),
+                  ("r_price", r.get("price", "")), ("r_fare", r.get("fare", "")),
+                  ("r_start", r.get("start", "")), ("r_end", r.get("end", ""))]
+        pairs += [(f"r_wd_{i}", str(w)) for w in r.get("wds", [])]
+    return DraftForm(pairs)
+
+
+def _rows(form, prefix):
+    names = form.getlist(f"{prefix}_name")
+    days, amounts = form.getlist(f"{prefix}_day"), form.getlist(f"{prefix}_amount")
+    return [{"name": names[i], "day": days[i] if i < len(days) else "",
+             "amount": amounts[i] if i < len(amounts) else ""} for i in range(len(names))]
+
+
+def take_step(d, form, step, editing):
+    # 지금 단계 화면에 있던 칸을 draft로 옮긴다 (가는 곳은 고치는 화면일 때만 칸이 있다)
+    if step == 1:
+        d["balance"] = (form.get("balance") or "").strip()
+    elif step == 2:
+        d["incomes"] = _rows(form, "inc")
+        d["main"] = form.get("main") or ""
+    elif step == 3:
+        d["fixed"] = _rows(form, "fix")
+    elif step == 4 and editing:
+        names = form.getlist("r_name")
+        meals, prices, fares = form.getlist("r_meals"), form.getlist("r_price"), form.getlist("r_fare")
+        starts, ends = form.getlist("r_start"), form.getlist("r_end")
+
+        def at(items, i):
+            return items[i] if i < len(items) else ""
+
+        d["routines"] = [{"name": names[i], "wds": form.getlist(f"r_wd_{i}"), "meals": at(meals, i),
+                          "price": at(prices, i), "fare": at(fares, i), "start": at(starts, i),
+                          "end": at(ends, i)} for i in range(len(names))]
+    return d
+
+
+def apply_op(d, op):
+    # 줄 더하기·빼기, 없어요 같은 버튼. 처리했으면 True
+    kind, _, arg = op.partition(":")
+    index = int(arg) if arg.isdigit() else -1
+    if kind == "add_income" and len(d["incomes"]) < INCOME_ROWS:
+        d["incomes"].append({"name": "", "day": "", "amount": ""})
+    elif kind == "del_income" and 0 <= index < len(d["incomes"]):
+        del d["incomes"][index]
+        main = int(d["main"]) if d["main"].isdigit() else -1
+        if main == index:
+            d["main"] = "0" if d["incomes"] else ""  # 기준 줄을 빼면 남은 첫 줄이 기준
+        elif main > index:
+            d["main"] = str(main - 1)
+    elif kind == "add_fixed" and len(d["fixed"]) < FIXED_ROWS:
+        d["fixed"].append({"name": "", "day": "", "amount": ""})
+    elif kind == "del_fixed" and 0 <= index < len(d["fixed"]):
+        del d["fixed"][index]
+    elif kind == "no_fixed":
+        d["fixed"] = []
+    elif kind == "add_alba" and len(d["routines"]) < ROUTINE_ROWS:
+        d["routines"].append(dict(ALBA, wds=list(ALBA["wds"])))
+    elif kind == "add_routine" and len(d["routines"]) < ROUTINE_ROWS:
+        d["routines"].append({"name": "", "wds": [], "meals": "0", "price": "0", "fare": "0",
+                              "start": "", "end": ""})
+    elif kind == "del_routine" and 0 <= index < len(d["routines"]):
+        del d["routines"][index]
+    elif kind == "no_routine":
+        d["routines"] = []
+    else:
+        return False
+    return True
+
+
+def check_step(d, step):
+    # [다음]을 누르기 전 검사. 문제가 있으면 FormError
+    if step == 1:
+        to_int(d["balance"], "지금 잔액", low=-MAX_MONEY)
+    elif step in (2, 3):
+        parse_step1(draft_to_form(d))
+    elif step == 4:
+        parse_step2(draft_to_form(d))
+
+
+def draft_data(d):
+    # create_account가 받는 모양 (다섯 단계 값을 한 번 더 검사한다)
+    form = draft_to_form(d)
+    data = parse_step1(form)
+    data["routines"] = parse_step2(form)
+    return data
+
+
+def example_left(d):
+    # 5/5에서 알려 줄 '아직 예시 값' 줄 이름 (금액까지 예시와 똑같이 남은 줄)
+    names = [r.get("name") for r in d["incomes"] if r in EXAMPLE_INCOMES]
+    return names + [r.get("name") for r in d["fixed"] if r in EXAMPLE_FIXED]
+
+
+def preview(data, today):
+    # 5/5 확인 화면 (R17): 기록이 없는 새 사람의 첫날 홈과 같은 계산 (R2~R8)
+    start, end = first_period(data, today)
+    days_left = (end - today).days + 1
+    income = calc.incomes_sum(today, end, data["incomes"])
+    fixed = calc.monthly_sum(today, end, data["fixed"])
+    min_living = calc.min_living(today, end, data["routines"])
+    free = calc.free_money(data["balance"], income, fixed, 0, min_living)
+    daily = calc.daily_margin(free, days_left)
+    return {"start": start, "end": end, "days_left": days_left, "balance": data["balance"],
+            "income": income, "fixed": fixed, "min_living": min_living, "free": free,
+            "daily": daily, "stage": calc.stage(daily, data["comfort_daily"]),
+            "budget": calc.today_budget(today, data["routines"], [], daily)}
+
+
+def weekday_text(wds):
+    # [0,1,2,3,4] -> 월~금, [5,6] -> 토·일, [0,2,4] -> 월·수·금
+    days = sorted({int(w) for w in wds if str(w).isdigit() and int(w) < 7})
+    if not days:
+        return "요일 없음"
+    if len(days) >= 3 and days == list(range(days[0], days[-1] + 1)):
+        return f"{WEEKDAYS[days[0]]}~{WEEKDAYS[days[-1]]}"
+    return "·".join(WEEKDAYS[x] for x in days)

@@ -65,3 +65,33 @@ def save_split(conn, user_id, today, selected):
         conn.rollback()
         raise
     return True
+
+
+def unbuy_items(conn, user_id, item_ids, day):
+    # 되돌리기 (19): 그날 산 것만 사기 전으로. 그날 밤 잔액을 적었으면 뺐던 값을 돌려놓는다
+    try:
+        rows = queries.unbuy_items(conn, user_id, item_ids, day)
+        total = sum(r["price"] for r in rows)
+        if total and queries.get_balance_log(conn, user_id, day) is not None:
+            queries.adjust_balance_log(conn, user_id, day, total)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    return len(rows)
+
+
+def unreturn_item(conn, user_id, item_id, day):
+    # 되돌리기 (22): 그날 반품한 것만 다시 산 것으로. 그날 밤 잔액을 적었으면 더했던 환불을 뺀다
+    mine = [i for i in queries.get_items(conn, user_id) if i["item_id"] == item_id]
+    if not mine or mine[0]["status"] != "returned" or mine[0]["returned_date"] != day:
+        return False
+    try:
+        done = queries.unreturn_item(conn, user_id, item_id, day)
+        if done and queries.get_balance_log(conn, user_id, day) is not None:
+            queries.adjust_balance_log(conn, user_id, day, -mine[0]["price"])
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    return bool(done)

@@ -18,7 +18,6 @@ DROP TABLE IF EXISTS users;
 CREATE TABLE users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     public_id CHAR(36) NOT NULL UNIQUE,
-    recovery_hash CHAR(64) NOT NULL,
     comfort_daily INT NOT NULL DEFAULT 10000,
     hourly_wage INT NOT NULL DEFAULT 10320,
     emergency_fund INT NOT NULL DEFAULT 0,
