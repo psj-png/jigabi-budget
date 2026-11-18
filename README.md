@@ -31,6 +31,15 @@ http://localhost:8000/demo 를 열면 예시 사람(seed)으로 둘러볼 수 �
 
 DB는 처음 실행할 때 `db/schema.sql`, `db/seed.sql`이 자동으로 들어간다. 테이블을 처음부터 다시 만들려면 `docker compose down -v` 후 다시 실행한다.
 
+### 캡처로 상품 담기 (선택)
+
+`.env`에 OpenAI API 키를 넣으면 장바구니의 추가 칸 위에 '쇼핑 화면 캡처로 채우기'가 보인다. 캡처에서 상품 이름과 가격을 읽어 칸을 채워 주고, 저장은 사용자가 [추가]를 눌러야 한다. 캡처는 저장하지 않는다. 키가 없으면 이 칸만 숨겨지고 나머지는 그대로 쓸 수 있다.
+
+```
+OPENAI_API_KEY=키
+OPENAI_MODEL=gpt-5-mini
+```
+
 ## 기술 스택
 
 - FastAPI, Jinja2
