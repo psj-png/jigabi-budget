@@ -35,9 +35,9 @@
         {% endfor %}
       </div>
       <div class="num-grid">
-        <label>밖에서 먹는 끼니 수<input type="number" name="meals" value="{{ r.meals_out }}" min="0" max="10"></label>
-        <label>한 끼 가격 (원)<input type="number" name="price" value="{{ r.meal_price }}" min="0"></label>
-        <label>왕복 교통비 (원)<input type="number" name="fare" value="{{ r.round_trip_fare }}" min="0"></label>
+        <label>밖에서 먹는 끼니 수<span class="unit-input"><input type="number" name="meals" value="{{ r.meals_out }}" min="0" max="10"><i>끼</i></span></label>
+        <label>한 끼 가격<span class="unit-input"><input type="number" name="price" value="{{ r.meal_price }}" min="0"><i>원</i></span></label>
+        <label>왕복 교통비<span class="unit-input"><input type="number" name="fare" value="{{ r.round_trip_fare }}" min="0"><i>원</i></span></label>
       </div>
       <details class="more">
         <summary>자세히 (시작일·끝나는 날)</summary>
@@ -68,9 +68,9 @@
         {% endfor %}
       </div>
       <div class="num-grid">
-        <label>밖에서 먹는 끼니 수<input type="number" name="meals" value="{{ r.meals_out }}" min="0" max="10"></label>
-        <label>한 끼 가격 (원)<input type="number" name="price" value="{{ r.meal_price }}" min="0"></label>
-        <label>왕복 교통비 (원)<input type="number" name="fare" value="{{ r.round_trip_fare }}" min="0"></label>
+        <label>밖에서 먹는 끼니 수<span class="unit-input"><input type="number" name="meals" value="{{ r.meals_out }}" min="0" max="10"><i>끼</i></span></label>
+        <label>한 끼 가격<span class="unit-input"><input type="number" name="price" value="{{ r.meal_price }}" min="0"><i>원</i></span></label>
+        <label>왕복 교통비<span class="unit-input"><input type="number" name="fare" value="{{ r.round_trip_fare }}" min="0"><i>원</i></span></label>
       </div>
       <details class="more">
         <summary>자세히 (시작일·끝나는 날)</summary>

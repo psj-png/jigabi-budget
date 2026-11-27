@@ -27,7 +27,7 @@
 <form method="post" action="/cart/items" id="add">
   {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
   <label class="field">이름<input type="text" name="name" maxlength="60" required value="{{ cap.name if cap else '' }}"{% if cap and cap.name %} class="ai-filled"{% endif %}></label>
-  <label class="field">가격 (할인 뒤 낼 돈)<input type="number" name="price" min="1" required value="{{ cap.price if cap else '' }}"{% if cap and cap.price %} class="ai-filled"{% endif %}></label>
+  <label class="field">가격 (할인 뒤 낼 돈)<span class="unit-input{% if cap and cap.price %} ai-filled{% endif %}"><input type="number" name="price" min="1" required value="{{ cap.price if cap else '' }}"><i>원</i></span></label>
   <label class="field">필요한 날 (비워도 돼요)<input type="date" name="need_by" min="{{ now }}"></label>
   <button type="submit" class="btn{% if not filled %} btn-sub{% endif %}">추가</button>
 </form>

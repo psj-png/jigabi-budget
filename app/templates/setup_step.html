@@ -61,7 +61,7 @@
       <input type="text" name="inc_name" value="{{ row.name }}" maxlength="20" placeholder="예: 알바비" aria-label="이름">
       <button type="submit" class="btn-small sq" name="go" value="del_income:{{ i }}" formnovalidate aria-label="빼기">−</button>
     </div>
-    <div class="pair">매달 <input class="day" type="number" name="inc_day" value="{{ row.day }}" min="1" max="31" aria-label="매달 며칠">일 <input class="amt" type="number" name="inc_amount" value="{{ row.amount }}" min="0" aria-label="금액">원</div>
+    <div class="pair">매달 <span class="unit-input day"><input type="number" name="inc_day" value="{{ row.day }}" min="1" max="31" aria-label="매달 며칠"><i>일</i></span><span class="unit-input amt"><input type="number" name="inc_amount" value="{{ row.amount }}" min="0" aria-label="금액"><i>원</i></span></div>
     {% if row in example_incomes %}<span class="example-tag">예시 값이에요. 내 금액으로 바꿔 주세요</span>{% endif %}
   </section>
   {% else %}
@@ -81,7 +81,7 @@
       <input type="text" name="fix_name" value="{{ row.name }}" maxlength="20" placeholder="예: 통신비" aria-label="이름">
       <button type="submit" class="btn-small sq" name="go" value="del_fixed:{{ i }}" formnovalidate aria-label="빼기">−</button>
     </div>
-    <div class="pair">매달 <input class="day" type="number" name="fix_day" value="{{ row.day }}" min="1" max="31" aria-label="매달 며칠">일 <input class="amt" type="number" name="fix_amount" value="{{ row.amount }}" min="0" aria-label="금액">원</div>
+    <div class="pair">매달 <span class="unit-input day"><input type="number" name="fix_day" value="{{ row.day }}" min="1" max="31" aria-label="매달 며칠"><i>일</i></span><span class="unit-input amt"><input type="number" name="fix_amount" value="{{ row.amount }}" min="0" aria-label="금액"><i>원</i></span></div>
     {% if row in example_fixed %}<span class="example-tag">예시 값이에요. 내 금액으로 바꿔 주세요</span>{% endif %}
   </section>
   {% else %}
@@ -109,9 +109,9 @@
       {% endfor %}
     </div>
     <div class="num-grid">
-      <label>밖에서 먹는 끼니 수<input type="number" name="r_meals" value="{{ r.meals }}" min="0" max="10"><span class="hint-num">보통 1~2끼</span></label>
-      <label>한 끼 가격 (원)<input type="number" name="r_price" value="{{ r.price }}" min="0"><span class="hint-num">학식은 보통 5,000~7,000원</span></label>
-      <label>왕복 교통비 (원)<input type="number" name="r_fare" value="{{ r.fare }}" min="0"><span class="hint-num">버스·지하철 왕복 보통 3,000원 안팎</span></label>
+      <label>밖에서 먹는 끼니 수<span class="unit-input"><input type="number" name="r_meals" value="{{ r.meals }}" min="0" max="10"><i>끼</i></span><span class="hint-num">보통 1~2끼</span></label>
+      <label>한 끼 가격<span class="unit-input"><input type="number" name="r_price" value="{{ r.price }}" min="0"><i>원</i></span><span class="hint-num">학식은 보통 5,000~7,000원</span></label>
+      <label>왕복 교통비<span class="unit-input"><input type="number" name="r_fare" value="{{ r.fare }}" min="0"><i>원</i></span><span class="hint-num">버스·지하철 왕복 보통 3,000원 안팎</span></label>
     </div>
     <details class="more">
       <summary>자세히 (시작일·끝나는 날)</summary>

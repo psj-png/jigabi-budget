@@ -21,8 +21,8 @@
       {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
       <label class="field">이름<input type="text" name="name" value="{{ r.name }}" maxlength="20" required></label>
       <div class="num-grid">
-        <label>매달 며칠<input type="number" name="day" value="{{ r.day_of_month }}" min="1" max="31" required></label>
-        <label>금액 (원)<input type="number" name="amount" value="{{ r.amount }}" min="1" required></label>
+        <label>매달 며칠<span class="unit-input"><input type="number" name="day" value="{{ r.day_of_month }}" min="1" max="31" required><i>일</i></span></label>
+        <label>금액<span class="unit-input"><input type="number" name="amount" value="{{ r.amount }}" min="1" required><i>원</i></span></label>
       </div>
       <button type="submit" class="btn">저장</button>
     </form>
@@ -46,8 +46,8 @@
       {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
       <label class="field">이름<input type="text" name="name" maxlength="20" placeholder="{% if kind == 'incomes' %}예: 장학금{% else %}예: 음악 구독{% endif %}" required></label>
       <div class="num-grid">
-        <label>매달 며칠<input type="number" name="day" min="1" max="31" required></label>
-        <label>금액 (원)<input type="number" name="amount" min="1" required></label>
+        <label>매달 며칠<span class="unit-input"><input type="number" name="day" min="1" max="31" required><i>일</i></span></label>
+        <label>금액<span class="unit-input"><input type="number" name="amount" min="1" required><i>원</i></span></label>
       </div>
       <button type="submit" class="btn">넣기</button>
     </form>
