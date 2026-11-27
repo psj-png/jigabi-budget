@@ -360,6 +360,10 @@ body.start-page { background: #EEF4FF; }
 .hint-num { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
 .place-card b { font-size: 16px; }
 .place-card p { margin: 4px 0 0; }
+.place-btn { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 56px; border: 0; font: inherit; color: var(--text); text-align: left; cursor: pointer; }
+.place-btn span { flex: 1; min-width: 0; }
+.place-btn small { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); }
+.place-btn::after { content: ""; flex: none; width: 7px; height: 7px; margin-right: 6px; border-right: 2px solid var(--muted); border-top: 2px solid var(--muted); transform: rotate(45deg); }
 .two-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
 .gap-top { margin-top: 8px; }
 .confirm { list-style: none; margin: 0; padding: 0; }

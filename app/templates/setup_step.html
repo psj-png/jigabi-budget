@@ -102,7 +102,7 @@
   {% endif %}
 
   {% elif step == 4 %}
-  {# 4/5 가는 곳: 접힌 카드로 보여주고 [이대로 할게요] / [고칠게요] #}
+  {# 4/5 가는 곳: 접힌 카드로 보여주고, 카드를 누르면 고치는 화면 / [이대로 할게요] #}
   <h1 class="split-title">매주 가는 곳이 있나요?</h1>
   <p class="top-sub" style="margin-top: 0">학교·알바처럼 밖에서 밥을 먹고 교통비가 드는 곳이에요. 여기서 나오는 밥값·교통비는 앱이 줄이지 않아요.</p>
   {% if editing %}
@@ -139,17 +139,14 @@
   <button type="submit" class="btn" name="go" value="next">다음</button>
   {% else %}
   {% for r in d.routines %}
-  <section class="card place-card">
-    <b>{{ r.name }}</b>
-    <p class="small">{{ weekday_text(r.wds) }} · {% if r.meals|int > 0 %}{{ r.meals }}끼 {{ "{:,}".format(r.price|int) }}원{% else %}밖에서 안 먹어요{% endif %} · 왕복 {{ "{:,}".format(r.fare|int) }}원</p>
-  </section>
+  {# 카드를 누르면 고치는 화면 (설정 목록과 같은 > 표시) #}
+  <button type="submit" class="card place-card place-btn" name="go" value="edit" formnovalidate>
+    <span><b>{{ r.name }}</b><small>{{ weekday_text(r.wds) }} · {% if r.meals|int > 0 %}{{ r.meals }}끼 {{ "{:,}".format(r.price|int) }}원{% else %}밖에서 안 먹어요{% endif %} · 왕복 {{ "{:,}".format(r.fare|int) }}원</small></span>
+  </button>
   {% endfor %}
   {% if d.routines|length < rows_max.routines %}<button type="submit" class="link-btn" name="go" value="add_routine" formnovalidate>+ 가는 곳 더하기</button>{% endif %}
   {% if d.routines %}
-  <div class="two-btns">
-    <button type="submit" class="btn" name="go" value="next">이대로 할게요</button>
-    <button type="submit" class="btn btn-sub" name="go" value="edit" formnovalidate>고칠게요</button>
-  </div>
+  <button type="submit" class="btn" name="go" value="next">이대로 할게요</button>
   {% else %}
   <section class="card"><p class="small">가는 곳이 없어요. 최소 생활비를 0원으로 계산해요.</p></section>
   <button type="submit" class="btn" name="go" value="next">다음</button>
