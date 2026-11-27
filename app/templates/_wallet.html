@@ -1,16 +1,94 @@
-{# 지갑이 캐릭터: 단계 이름을 받아 SVG를 그린다 (viewBox 고정, 크기만 size) #}
+{# 지갑이 캐릭터 (새 시안): 단계 이름을 받아 SVG를 그린다. viewBox 200x160, 폭이 size #}
 {% macro wallet(stage, size) %}
-<svg role="img" aria-label="지갑이 {{ stage }} 단계" width="{{ size }}" height="{{ size }}" viewBox="0 0 120 120">
+<svg class="jg" role="img" aria-label="지갑이 {{ stage }} 단계" width="{{ size }}" height="{{ (size * 0.8)|int }}" viewBox="0 0 200 160" style="overflow: visible">
 {% if stage == '빵빵' %}
-<ellipse cx="60" cy="106" rx="40" ry="5" fill="#DDE3EC"/><rect x="30" y="14" width="42" height="26" rx="3" fill="#D6F5E3" stroke="#3E9E73" stroke-width="2" transform="rotate(-12 51 27)"/><rect x="50" y="12" width="42" height="26" rx="3" fill="#BFEBD3" stroke="#3E9E73" stroke-width="2" transform="rotate(10 71 25)"/><rect x="14" y="30" width="92" height="70" rx="20" fill="#6FD3A8"/><rect x="82" y="54" width="28" height="20" rx="10" fill="#4FBF8F"/><circle cx="96" cy="64" r="4" fill="#FFFFFF"/><path d="M36 64 q5 -7 10 0" stroke="#191F28" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M58 64 q5 -7 10 0" stroke="#191F28" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M42 74 q10 12 20 0 z" fill="#191F28"/><circle cx="32" cy="76" r="4.5" fill="#FF8FA3" opacity="0.5"/><circle cx="72" cy="76" r="4.5" fill="#FF8FA3" opacity="0.5"/>
+<ellipse cx="100" cy="149" rx="52" ry="6" fill="#DDE3EC"/>
+<g transform="translate(20 0)"><g class="jg-bob">
+<g class="jg-wiggle">
+<g transform="rotate(-36 80 70)"><rect x="66" y="14" width="28" height="44" rx="3" fill="#D6F5E3" stroke="#3E9E73" stroke-width="2"/><circle cx="80" cy="34" r="5" fill="none" stroke="#3E9E73" stroke-width="2"/></g>
+<g transform="rotate(36 80 70)"><rect x="66" y="14" width="28" height="44" rx="3" fill="#D6F5E3" stroke="#3E9E73" stroke-width="2"/><circle cx="80" cy="34" r="5" fill="none" stroke="#3E9E73" stroke-width="2"/></g>
+<g transform="rotate(-18 80 70)"><rect x="66" y="12" width="28" height="44" rx="3" fill="#BFEBD3" stroke="#3E9E73" stroke-width="2"/><circle cx="80" cy="32" r="5" fill="none" stroke="#3E9E73" stroke-width="2"/></g>
+<g transform="rotate(18 80 70)"><rect x="66" y="12" width="28" height="44" rx="3" fill="#BFEBD3" stroke="#3E9E73" stroke-width="2"/><circle cx="80" cy="32" r="5" fill="none" stroke="#3E9E73" stroke-width="2"/></g>
+<rect x="66" y="8" width="28" height="46" rx="3" fill="#D6F5E3" stroke="#3E9E73" stroke-width="2"/><circle cx="80" cy="28" r="5" fill="none" stroke="#3E9E73" stroke-width="2"/>
+</g>
+<path d="M26 92 q-14 -6 -14 -24" stroke="#46B987" stroke-width="9" stroke-linecap="round" fill="none"/>
+<path d="M134 72 q14 -4 16 -22" stroke="#46B987" stroke-width="9" stroke-linecap="round" fill="none"/>
+<ellipse cx="56" cy="141" rx="11" ry="5" fill="#46B987"/><ellipse cx="102" cy="141" rx="11" ry="5" fill="#46B987"/>
+<rect x="20" y="50" width="120" height="90" rx="34" fill="#6FD3A8"/>
+<ellipse cx="44" cy="66" rx="11" ry="5" fill="#FFFFFF" opacity="0.4"/>
+<rect x="120" y="82" width="28" height="24" rx="12" fill="#46B987"/><circle cx="136" cy="94" r="5" fill="#FFFFFF"/>
+<path d="M50 90 q7 -9 14 0" stroke="#191F28" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+<path d="M84 90 q7 -9 14 0" stroke="#191F28" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+<path d="M62 101 q12 18 24 0 z" fill="#191F28"/><ellipse cx="74" cy="107" rx="5" ry="2.5" fill="#FF8FA3"/>
+<circle cx="42" cy="102" r="6" fill="#FF8FA3" opacity="0.45"/><circle cx="106" cy="102" r="6" fill="#FF8FA3" opacity="0.45"/>
+</g></g>
+<path d="M184 12 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3 z" fill="#FFD66B"/>
 {% elif stage == '든든' %}
-<ellipse cx="60" cy="106" rx="38" ry="5" fill="#DDE3EC"/><rect x="16" y="40" width="88" height="58" rx="18" fill="#7FA8FF"/><rect x="82" y="58" width="26" height="18" rx="9" fill="#5B8DF6"/><circle cx="95" cy="67" r="3.5" fill="#FFFFFF"/><circle cx="44" cy="67" r="4" fill="#191F28"/><circle cx="64" cy="67" r="4" fill="#191F28"/><path d="M47 78 q7 7 14 0" stroke="#191F28" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="36" cy="77" r="4.5" fill="#FF8FA3" opacity="0.5"/><circle cx="72" cy="77" r="4.5" fill="#FF8FA3" opacity="0.5"/>
+<ellipse cx="100" cy="149" rx="50" ry="6" fill="#DDE3EC"/>
+<g transform="translate(20 0)"><g class="jg-bob">
+<g transform="rotate(-14 80 78)"><rect x="67" y="26" width="26" height="40" rx="3" fill="#D6F5E3" stroke="#3E9E73" stroke-width="2"/><circle cx="80" cy="44" r="4.5" fill="none" stroke="#3E9E73" stroke-width="2"/></g>
+<g transform="rotate(14 80 78)"><rect x="67" y="26" width="26" height="40" rx="3" fill="#D6F5E3" stroke="#3E9E73" stroke-width="2"/><circle cx="80" cy="44" r="4.5" fill="none" stroke="#3E9E73" stroke-width="2"/></g>
+<rect x="67" y="22" width="26" height="42" rx="3" fill="#BFEBD3" stroke="#3E9E73" stroke-width="2"/><circle cx="80" cy="40" r="4.5" fill="none" stroke="#3E9E73" stroke-width="2"/>
+<path d="M136 100 q10 6 8 18" stroke="#5B8DF6" stroke-width="9" stroke-linecap="round" fill="none"/>
+<ellipse cx="58" cy="141" rx="11" ry="5" fill="#5B8DF6"/><ellipse cx="100" cy="141" rx="11" ry="5" fill="#5B8DF6"/>
+<rect x="22" y="58" width="116" height="82" rx="26" fill="#7FA8FF"/>
+<ellipse cx="44" cy="72" rx="10" ry="4.5" fill="#FFFFFF" opacity="0.4"/>
+<rect x="118" y="86" width="28" height="22" rx="11" fill="#5B8DF6"/><circle cx="132" cy="97" r="4" fill="#FFFFFF"/>
+<circle cx="56" cy="94" r="5" fill="#191F28"/><circle cx="54.5" cy="92.5" r="1.6" fill="#FFFFFF"/>
+<circle cx="90" cy="94" r="5" fill="#191F28"/><circle cx="88.5" cy="92.5" r="1.6" fill="#FFFFFF"/>
+<path d="M64 104 q9 9 18 0" stroke="#191F28" stroke-width="3" fill="none" stroke-linecap="round"/>
+<circle cx="44" cy="104" r="5.5" fill="#FF8FA3" opacity="0.45"/><circle cx="102" cy="104" r="5.5" fill="#FF8FA3" opacity="0.45"/>
+<path d="M24 106 q-8 16 14 20" stroke="#5B8DF6" stroke-width="9" stroke-linecap="round" fill="none"/>
+</g></g>
 {% elif stage == '홀쭉' %}
-<ellipse cx="60" cy="106" rx="36" ry="5" fill="#DDE3EC"/><rect x="18" y="56" width="84" height="42" rx="14" fill="#FFD66B"/><rect x="80" y="66" width="26" height="16" rx="8" fill="#F2BF3D"/><circle cx="93" cy="74" r="3" fill="#FFFFFF"/><circle cx="44" cy="74" r="3.5" fill="#191F28"/><circle cx="64" cy="74" r="3.5" fill="#191F28"/><path d="M48 85 h12" stroke="#191F28" stroke-width="3" stroke-linecap="round"/><path d="M88 40 q6 9 0 13 q-6 -4 0 -13 z" fill="#7CC4FF"/>
+<ellipse cx="100" cy="149" rx="44" ry="5" fill="#DDE3EC"/>
+<g transform="translate(20 0)">
+<g transform="rotate(10 80 80)"><rect x="68" y="40" width="24" height="38" rx="3" fill="#D6F5E3" stroke="#3E9E73" stroke-width="2"/><circle cx="80" cy="56" r="4" fill="none" stroke="#3E9E73" stroke-width="2"/></g>
+<path d="M36 104 q-8 8 -6 20" stroke="#F2BF3D" stroke-width="8" stroke-linecap="round" fill="none"/>
+<path d="M124 104 q8 8 6 20" stroke="#F2BF3D" stroke-width="8" stroke-linecap="round" fill="none"/>
+<ellipse cx="62" cy="141" rx="9" ry="4.5" fill="#F2BF3D"/><ellipse cx="98" cy="141" rx="9" ry="4.5" fill="#F2BF3D"/>
+<rect x="32" y="74" width="96" height="66" rx="18" fill="#FFD66B"/>
+<rect x="112" y="94" width="24" height="18" rx="9" fill="#F2BF3D"/><circle cx="124" cy="103" r="3.5" fill="#FFFFFF"/>
+<path d="M50 90 l11 -4 M79 86 l11 4" stroke="#191F28" stroke-width="3" stroke-linecap="round"/>
+<ellipse cx="56" cy="98" rx="6" ry="5" fill="#FFFFFF"/><circle cx="59" cy="98" r="3" fill="#191F28"/>
+<ellipse cx="84" cy="98" rx="6" ry="5" fill="#FFFFFF"/><circle cx="87" cy="98" r="3" fill="#191F28"/>
+<path d="M59 112 q3.5 -4 7 0 q3.5 4 7 0 q3.5 -4 7 0" stroke="#191F28" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<g class="jg-drip"><path d="M104 66 q9 13 0 20 q-9 -7 0 -20 z" fill="#7CC4FF"/></g>
+</g>
 {% elif stage == '텅텅' %}
-<ellipse cx="60" cy="106" rx="34" ry="5" fill="#DDE3EC"/><rect x="18" y="70" width="84" height="28" rx="10" fill="#FFB37A"/><rect x="80" y="75" width="24" height="14" rx="7" fill="#F2964F"/><circle cx="92" cy="82" r="2.5" fill="#FFFFFF"/><path d="M39 81 h8 M59 81 h8" stroke="#191F28" stroke-width="3" stroke-linecap="round"/><path d="M47 90 q3 -3 6 0 q3 3 6 0" stroke="#191F28" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="30" cy="58" r="2" fill="#C9D1DC"/><circle cx="40" cy="50" r="1.5" fill="#C9D1DC"/><circle cx="84" cy="56" r="2" fill="#C9D1DC"/>
+<ellipse cx="100" cy="149" rx="56" ry="5" fill="#DDE3EC"/>
+<g transform="translate(20 0)">
+<path d="M34 106 L44 82 Q46 78 50 78 H110 Q114 78 116 82 L126 106 Z" fill="#F2964F"/>
+<path d="M30 116 q-10 8 -10 20" stroke="#F2964F" stroke-width="8" stroke-linecap="round" fill="none"/>
+<path d="M130 116 q10 8 10 20" stroke="#F2964F" stroke-width="8" stroke-linecap="round" fill="none"/>
+<ellipse cx="58" cy="142" rx="9" ry="4" fill="#F2964F"/><ellipse cx="102" cy="142" rx="9" ry="4" fill="#F2964F"/>
+<rect x="26" y="102" width="108" height="38" rx="14" fill="#FFB37A"/>
+<rect x="38" y="100" width="84" height="6" rx="3" fill="#8A4B1F"/>
+<rect x="116" y="112" width="22" height="14" rx="7" fill="#F2964F"/><circle cx="127" cy="119" r="3" fill="#FFFFFF"/>
+<circle cx="60" cy="118" r="3.2" fill="#191F28"/><circle cx="86" cy="118" r="3.2" fill="#191F28"/>
+<circle cx="73" cy="129" r="3.5" fill="none" stroke="#191F28" stroke-width="2.5"/>
+</g>
+<text class="jg-echo1" x="112" y="74" font-family="Jua, sans-serif" font-size="18" fill="#9A3412">텅</text>
+<text class="jg-echo2" x="138" y="54" font-family="Jua, sans-serif" font-size="14" fill="#9A3412">텅</text>
 {% else %}
-<ellipse cx="60" cy="106" rx="34" ry="5" fill="#DDE3EC"/><path d="M60 34 C50 20 38 22 40 34 C40 42 52 42 60 36 Z" fill="#B7BCC6"/><path d="M60 34 C70 20 82 22 80 34 C80 42 68 42 60 36 Z" fill="#B7BCC6"/><ellipse cx="60" cy="35" rx="3.5" ry="8" fill="#8B8F99"/><path d="M58 28 q-3 -6 -7 -7 M62 28 q3 -6 7 -7" stroke="#8B8F99" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M50 52 l-3 6 M60 54 v7 M70 52 l3 6" stroke="#C9D1DC" stroke-width="2" stroke-linecap="round"/><rect x="22" y="62" width="62" height="12" rx="6" fill="#F27A8B" transform="rotate(-14 22 74)"/><rect x="18" y="74" width="84" height="24" rx="10" fill="#FF9DAA"/><circle cx="44" cy="83" r="3" fill="#191F28"/><circle cx="64" cy="83" r="3" fill="#191F28"/><path d="M48 93 q6 -5 12 0" stroke="#191F28" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M37 86 q3 5 0 7 q-3 -2 0 -7 z" fill="#7CC4FF"/>
+<ellipse cx="100" cy="149" rx="64" ry="5" fill="#DDE3EC"/>
+<g transform="translate(20 0)">
+<path d="M22 134 q-10 0 -16 6" stroke="#F27A8B" stroke-width="7" stroke-linecap="round" fill="none"/>
+<path d="M138 134 q10 0 16 6" stroke="#F27A8B" stroke-width="7" stroke-linecap="round" fill="none"/>
+<rect x="18" y="124" width="124" height="20" rx="9" fill="#FF9DAA"/>
+<path d="M63 127 l6 6 M69 127 l-6 6 M91 127 l6 6 M97 127 l-6 6" stroke="#191F28" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M72 139 q4 -3 8 0 q4 3 8 0" stroke="#191F28" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+<g class="jg-float">
+<rect x="54" y="64" width="46" height="34" rx="12" fill="#FFFFFF" stroke="#C9D1DC" stroke-width="2"/>
+<circle cx="70" cy="80" r="2.2" fill="#8B8F99"/><circle cx="84" cy="80" r="2.2" fill="#8B8F99"/>
+<circle cx="77" cy="89" r="2.6" fill="none" stroke="#8B8F99" stroke-width="1.8"/>
+</g>
+<g class="jg-flap">
+<path d="M128 36 C118 22 104 24 108 36 C110 44 122 42 128 38 Z" fill="#B7BCC6"/>
+<path d="M128 36 C138 22 152 24 148 36 C146 44 134 42 128 38 Z" fill="#B7BCC6"/>
+</g>
+<ellipse cx="128" cy="40" rx="3" ry="8" fill="#8B8F99"/>
+</g>
 {% endif %}
 </svg>
 {% endmacro %}

@@ -486,6 +486,26 @@ body:has(input:focus, textarea:focus) .fab { display: none; }
 .plan-look { margin: 4px 0 10px; font-size: 15px; }
 .plan-look .arrow { color: var(--blue); font-weight: 700; }
 .plan-note { margin: 4px 0 0; color: #0B7A4B; }
+/* ---- 11/28 개선안 (지갑이 새 시안, 홈·약속·장바구니·설정) ---- */
+@keyframes jg-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes jg-wiggle { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes jg-drip { 0% { transform: translateY(0); opacity: 0; } 20%, 80% { opacity: 1; } 100% { transform: translateY(10px); opacity: 0; } }
+@keyframes jg-echo { 0%, 100% { opacity: .15; } 50% { opacity: 1; } }
+@keyframes jg-flap { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.55); } }
+@keyframes jg-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.jg-bob { animation: jg-bob 1.6s ease-in-out infinite; }
+.jg-wiggle { transform-box: fill-box; transform-origin: 50% 100%; animation: jg-wiggle 1.2s ease-in-out infinite; }
+.jg-drip { animation: jg-drip 1.8s ease-in infinite; }
+.jg-echo1 { animation: jg-echo 1.5s ease-in-out infinite; }
+.jg-echo2 { animation: jg-echo 1.5s ease-in-out .25s infinite; }
+.jg-flap { transform-box: fill-box; transform-origin: 50% 50%; animation: jg-flap .4s ease-in-out infinite; }
+.jg-float { animation: jg-float 2.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .jg * { animation: none !important; } }
+
+/* 채팅 버튼: 말풍선 대신 빵빵 지갑이 */
+.fab { background: #FFFFFF; border: 2px solid var(--blue-soft); box-shadow: 0 6px 18px rgba(16, 24, 40, 0.18); width: 60px; height: 60px; }
+.fab .jg { display: block; width: 46px; height: 37px; fill: initial; stroke: none; }
+
 /* 글자 크기 체계 (도틀로 타이포): 제목은 자간 -0.5px, 본문 15/22 */
 body { line-height: 22px; }
 h1, h2, .big-money, .top h1, .page-title h1 { letter-spacing: -0.5px; }
