@@ -144,6 +144,7 @@
     <p class="small">{{ weekday_text(r.wds) }} · {% if r.meals|int > 0 %}{{ r.meals }}끼 {{ "{:,}".format(r.price|int) }}원{% else %}밖에서 안 먹어요{% endif %} · 왕복 {{ "{:,}".format(r.fare|int) }}원</p>
   </section>
   {% endfor %}
+  {% if d.routines|length < rows_max.routines %}<button type="submit" class="link-btn" name="go" value="add_routine" formnovalidate>+ 가는 곳 더하기</button>{% endif %}
   {% if d.routines %}
   <div class="two-btns">
     <button type="submit" class="btn" name="go" value="next">이대로 할게요</button>
