@@ -53,6 +53,10 @@ CREATE TABLE incomes (
     day_of_month TINYINT NOT NULL,
     amount INT NOT NULL,
     is_main BOOLEAN NOT NULL DEFAULT FALSE,
+    -- 주 수입은 한 사람에 하나만: 주 수입 줄만 user_id를 갖고 나머지는 NULL (UNIQUE는 NULL을 여러 개 허용)
+    -- STORED는 user_id의 ON DELETE CASCADE FK와 같이 못 써서 VIRTUAL로 둔다
+    main_user INT AS (IF(is_main, user_id, NULL)) VIRTUAL,
+    UNIQUE KEY uq_main_income (main_user),
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
@@ -109,6 +113,8 @@ CREATE TABLE periods (
     end_date DATE NOT NULL,
     opening_balance INT NOT NULL,
     repay_amount INT NOT NULL DEFAULT 0,
+    -- 같은 시작일의 기간은 한 줄만 (ensure_period가 겹쳐 불려도 두 번 만들어지지 않게)
+    UNIQUE KEY uq_period_start (user_id, start_date),
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 

@@ -901,3 +901,31 @@ def test_지난_기간_돌아보기(conn):
         date(2026, 10, 30), date(2026, 11, 24), 2, 1, 5800)
     assert [b["spent"] for b in hist["bars"]] == [5800, None]
     assert hist["diff"] is None
+
+
+def test_같은_기간은_한_번만_들어간다(conn):
+    user_id, _ = setup.create_account(conn, SEED_LIKE, date(2026, 10, 30))
+    try:
+        before = queries.get_user(conn, user_id)["emergency_fund"]
+        for _ in range(2):  # ensure_period가 겹쳐 불려도 한 줄
+            queries.insert_period(conn, user_id, date(2026, 11, 25), date(2026, 12, 24), 100000, 5000)
+        sql = "SELECT COUNT(*) FROM periods WHERE user_id = %s AND start_date = %s"
+        assert count(conn, sql, (user_id, date(2026, 11, 25))) == 1
+        assert queries.get_user(conn, user_id)["emergency_fund"] == before + 5000  # 갚은 돈도 한 번만
+    finally:
+        queries.delete_user(conn, user_id)
+
+
+def test_주_수입은_한_사람에_하나만(conn):
+    user_id, _ = setup.create_account(conn, SEED_LIKE, date(2026, 10, 30))
+    try:
+        with pytest.raises(pymysql.err.IntegrityError):
+            with conn.cursor() as cur:
+                cur.execute("INSERT INTO incomes (user_id, name, day_of_month, amount, is_main) "
+                            "VALUES (%s, '또 주 수입', 3, 100000, TRUE)", (user_id,))
+        conn.rollback()
+        # 주 수입이 아닌 줄은 여러 개여도 된다
+        queries.insert_income(conn, user_id, "용돈1", 5, 10000)
+        queries.insert_income(conn, user_id, "용돈2", 6, 10000)
+    finally:
+        queries.delete_user(conn, user_id)

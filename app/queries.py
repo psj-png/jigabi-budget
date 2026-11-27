@@ -110,14 +110,15 @@ def get_prev_period(conn, user_id, before):
 
 def insert_period(conn, user_id, start, end, opening_balance, repay_amount=0):
     # 갚을 돈(repay_amount)은 비상금으로 돌려놓은 것으로 보고 같이 더한다
+    # 같은 기간이 이미 있으면 IGNORE로 넘어가고(줄 수 0), 그땐 갚은 돈도 다시 더하지 않는다
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO periods (user_id, start_date, end_date, opening_balance, repay_amount) "
+                "INSERT IGNORE INTO periods (user_id, start_date, end_date, opening_balance, repay_amount) "
                 "VALUES (%s, %s, %s, %s, %s)",
                 (user_id, start, end, opening_balance, repay_amount),
             )
-            if repay_amount:
+            if repay_amount and cur.rowcount:
                 cur.execute(
                     "UPDATE users SET emergency_fund = emergency_fund + %s WHERE user_id = %s",
                     (repay_amount, user_id),
