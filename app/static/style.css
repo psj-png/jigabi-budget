@@ -1,3 +1,8 @@
+/* 글꼴: Pretendard (SIL OFL 1.1, app/static/fonts/Pretendard-LICENSE.txt). 도틀로와 같은 글꼴 */
+@font-face { font-family: 'Pretendard'; font-weight: 400; font-display: swap; src: url('/static/fonts/Pretendard-Regular.subset.woff2') format('woff2'); }
+@font-face { font-family: 'Pretendard'; font-weight: 500; font-display: swap; src: url('/static/fonts/Pretendard-Medium.subset.woff2') format('woff2'); }
+@font-face { font-family: 'Pretendard'; font-weight: 700; font-display: swap; src: url('/static/fonts/Pretendard-Bold.subset.woff2') format('woff2'); }
+
 /* 지갑이 공통 스타일: 모바일 390px 기준, 넓은 화면에서는 420px로 가운데 */
 :root {
   --bg: #F5F7FB;
@@ -18,7 +23,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: 'Noto Sans KR', system-ui, sans-serif;
+  font-family: 'Pretendard', system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.5;
   touch-action: manipulation;  /* 두 번 눌러 확대되지 않게 */
@@ -96,7 +101,7 @@ input, select, textarea { font-size: 16px; }  /* 16px보다 작으면 아이폰�
   display: inline-block;
   padding: 2px 12px;
   border-radius: 999px;
-  font-family: 'Jua', 'Noto Sans KR', sans-serif;
+  font-family: 'Jua', 'Pretendard', sans-serif;
   font-size: 18px;
 }
 .stage-빵빵 { color: #0B7A4B; background: #DDF7EC; }
@@ -104,7 +109,7 @@ input, select, textarea { font-size: 16px; }  /* 16px보다 작으면 아이폰�
 .stage-홀쭉 { color: #8A5A00; background: #FFF4D6; }
 .stage-텅텅 { color: #9A3412; background: #FFE8D9; }
 .stage-나방 { color: #9F1239; background: #FDE2E4; }
-.stage-line { margin: 6px 0 2px; font-family: 'Jua', 'Noto Sans KR', sans-serif; font-size: 16px; }
+.stage-line { margin: 6px 0 2px; font-family: 'Jua', 'Pretendard', sans-serif; font-size: 16px; }
 .daily { font-size: 14px; color: var(--muted); }
 .daily b { color: var(--text); }
 
@@ -132,8 +137,8 @@ input, select, textarea { font-size: 16px; }  /* 16px보다 작으면 아이폰�
 .st-홀쭉 { --st: #8A5A00; --st-bg: #FFF4D6; }
 .st-텅텅 { --st: #9A3412; --st-bg: #FFE8D9; }
 .st-나방 { --st: #9F1239; --st-bg: #FDE2E4; }
-.jua { font-family: 'Jua', 'Noto Sans KR', sans-serif; font-weight: 400; color: var(--st); }
-.jua-chip { display: inline-block; padding: 1px 10px; border-radius: 999px; font-family: 'Jua', 'Noto Sans KR', sans-serif; font-size: 14px; color: var(--st); background: var(--st-bg); }
+.jua { font-family: 'Jua', 'Pretendard', sans-serif; font-weight: 400; color: var(--st); }
+.jua-chip { display: inline-block; padding: 1px 10px; border-radius: 999px; font-family: 'Jua', 'Pretendard', sans-serif; font-size: 14px; color: var(--st); background: var(--st-bg); }
 
 /* 화면 위 헤더(뒤로 가기) */
 .top { display: flex; align-items: center; gap: 4px; margin: 0 0 12px -8px; }
@@ -304,7 +309,7 @@ input, select, textarea { font-size: 16px; }  /* 16px보다 작으면 아이폰�
 /* 시작 화면 */
 body.start-page { background: #EEF4FF; }
 .start-brand { margin: 8px 0 16px; text-align: center; font-size: 14px; font-weight: 700; color: var(--blue-dark); }
-.bubble { position: relative; margin: 0 8px 20px; padding: 16px; border-radius: 18px; background: #FFFFFF; text-align: center; font-family: 'Jua', 'Noto Sans KR', sans-serif; font-size: 18px; line-height: 1.5; }
+.bubble { position: relative; margin: 0 8px 20px; padding: 16px; border-radius: 18px; background: #FFFFFF; text-align: center; font-family: 'Jua', 'Pretendard', sans-serif; font-size: 18px; line-height: 1.5; }
 .bubble::after { content: ""; position: absolute; left: 50%; bottom: -10px; margin-left: -10px; border: 10px solid transparent; border-bottom: 0; border-top-color: #FFFFFF; }
 .start-char { display: flex; justify-content: center; margin-bottom: 8px; }
 .start-h1 { margin: 8px 0 16px; text-align: center; font-size: 20px; line-height: 1.5; }
@@ -481,3 +486,11 @@ body:has(input:focus, textarea:focus) .fab { display: none; }
 .plan-look { margin: 4px 0 10px; font-size: 15px; }
 .plan-look .arrow { color: var(--blue); font-weight: 700; }
 .plan-note { margin: 4px 0 0; color: #0B7A4B; }
+/* 글자 크기 체계 (도틀로 타이포): 제목은 자간 -0.5px, 본문 15/22 */
+body { line-height: 22px; }
+h1, h2, .big-money, .top h1, .page-title h1 { letter-spacing: -0.5px; }
+.page-title h1 { font-size: 22px; line-height: 30px; }
+.top h1 { font-size: 20px; line-height: 27px; }
+.label, .field { font-size: 13px; line-height: 18px; }
+.small, .row-sub { font-size: 12px; line-height: 17px; }
+

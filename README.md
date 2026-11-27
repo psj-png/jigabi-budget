@@ -72,7 +72,8 @@ docs/   계산 규칙
 
 ## 참고한 코드·자료
 
-- 
+- 글꼴 [Pretendard](https://github.com/orioncactus/pretendard) (SIL Open Font License 1.1). 파일과 라이선스는 `app/static/fonts/`에 그대로 넣었다
+- 글꼴 [Jua](https://fonts.google.com/specimen/Jua) (Google Fonts, SIL Open Font License 1.1)
 
 ## 라이선스
 
