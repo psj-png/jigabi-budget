@@ -1,5 +1,7 @@
 # 지갑이 (jigabi)
 
+![test](https://github.com/psj-png/jigabi-budget/actions/workflows/test.yml/badge.svg)
+
 사기 전에 '이거 사면 이번 달 내 생활'을 보여주고, 산 뒤엔 남은 날을 다시 짜주는 대학생 생활비 웹앱
 
 ## 왜 만들었나

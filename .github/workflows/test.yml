@@ -1,0 +1,35 @@
+# push와 pull_request 때 pytest를 돌린다. DB 테스트가 건너뛰어지면 실패로 본다
+name: test
+
+on: [push, pull_request]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Seoul
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_PASSWORD: test-password
+    services:
+      db:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: test-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -ptest-password"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"  # Dockerfile과 같은 버전
+      - run: pip install -r requirements.txt pytest
+      - name: pytest (OPENAI_API_KEY 없이: AI 테스트는 가짜 응답)
+        run: |
+          python -m pytest -q -rs | tee result.txt
+          ! grep -q skipped result.txt
