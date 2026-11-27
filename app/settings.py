@@ -14,7 +14,9 @@ def make_settings(conn, user_id, today):
     return {"per": per, "user": queries.get_user(conn, user_id),
             "min_living": calc.min_living(per["start_date"], per["end_date"], routines) if per else 0,
             "incomes": queries.list_incomes(conn, user_id), "fixed": queries.list_fixed(conn, user_id),
-            "places": places}
+            "places": places,
+            # 맨 위 숫자 칸: 이번 기간 남은 날 (오늘 포함)
+            "days_left": (per["end_date"] - today).days + 1 if per else 0}
 
 
 def money_row(form, label):

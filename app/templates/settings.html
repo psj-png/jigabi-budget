@@ -8,25 +8,28 @@
 <header class="page-title"><h1>설정</h1></header>
 
 {% if s.per %}
-<section class="card card-blue">
-  <h2>이번 기간 최소 생활비 {{ "{:,}".format(s.min_living) }}원</h2>
-  <p>{{ s.per.start_date.month }}/{{ s.per.start_date.day }}~{{ s.per.end_date.month }}/{{ s.per.end_date.day }} · 밥값·교통비로 꼭 나가는 돈이에요. 아래 값으로 정해져요.</p>
+<section class="card stat3" aria-label="이번 기간 {{ s.per.start_date.month }}/{{ s.per.start_date.day }}~{{ s.per.end_date.month }}/{{ s.per.end_date.day }}">
+  <div><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><b>{{ s.days_left }}일</b><span>남은 날</span></div>
+  <div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v7a3 3 0 0 0 6 0V4M10 4v16M17 4c-1.5 1-2 3-2 6h3v10"/></svg><b>{{ "{:,}".format(s.min_living) }}</b><span>최소 생활비</span></div>
+  <div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/></svg><b>{{ "{:,}".format(s.user.emergency_fund) }}</b><span>비상금</span></div>
 </section>
 {% endif %}
 
+<h2 class="sec-title">내 돈</h2>
 <section class="card">
   <ul class="menu">
-    <li><a href="/settings/incomes{{ q }}"><span>돈 들어오는 날<small>{% for i in s.incomes %}{{ i.name }} {{ i.day_of_month }}일{% if not loop.last %}, {% endif %}{% else %}없어요{% endfor %}</small></span></a></li>
-    <li><a href="/settings/fixed{{ q }}"><span>고정비<small>{% for f in s.fixed %}{{ f.name }} {{ f.day_of_month }}일{% if not loop.last %}, {% endif %}{% else %}없어요{% endfor %}</small></span></a></li>
-    <li><a href="/settings/places{{ q }}"><span>가는 곳<small>{% for r in s.places %}{{ r.name }}{% if not loop.last %}, {% endif %}{% else %}없어요{% endfor %}</small></span></a></li>
-    <li><a href="/settings/numbers{{ q }}"><span>시급·비상금·넉넉 기준<small>시급 {{ "{:,}".format(s.user.hourly_wage) }}원, 비상금 {{ "{:,}".format(s.user.emergency_fund) }}원</small></span></a></li>
+    <li><a href="/settings/incomes{{ q }}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6.5V8M12 16v1.5"/></svg><span>돈 들어오는 날</span><span class="val">{% for i in s.incomes %}{% if loop.first %}{{ i.name }} {{ i.day_of_month }}일{% endif %}{% else %}없어요{% endfor %}{% if s.incomes|length > 1 %} 외 {{ s.incomes|length - 1 }}{% endif %}</span></a></li>
+    <li><a href="/settings/fixed{{ q }}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg><span>고정비</span><span class="val">{% if s.fixed %}{{ s.fixed|length }}개{% else %}없어요{% endif %}</span></a></li>
+    <li><a href="/settings/places{{ q }}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg><span>가는 곳</span><span class="val">{% for r in s.places %}{{ r.name }}{% if not loop.last %}, {% endif %}{% else %}없어요{% endfor %}</span></a></li>
+    <li><a href="/settings/numbers{{ q }}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span>시급·비상금·넉넉 기준</span><span class="val">시급 {{ "{:,}".format(s.user.hourly_wage) }}원</span></a></li>
   </ul>
 </section>
 
+<h2 class="sec-title">기록</h2>
 <section class="card">
   <ul class="menu">
-    <li><a href="/settings/history{{ q }}"><span>지난 기간 돌아보기</span></a></li>
-    <li><a class="danger" href="/settings/delete{{ q }}"><span>데이터 지우기</span></a></li>
+    <li><a href="/settings/history{{ q }}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><span>지난 기간 돌아보기</span></a></li>
+    <li><a class="danger" href="/settings/delete{{ q }}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M6 7l1 13h10l1-13M9 7V4h6v3"/></svg><span>데이터 지우기</span></a></li>
   </ul>
 </section>
 {% endblock %}

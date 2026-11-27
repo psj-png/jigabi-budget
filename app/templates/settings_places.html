@@ -56,9 +56,8 @@
 <section class="card"><p class="small">가는 곳이 없어요. 지금은 밥값·교통비를 0원으로 계산해요.</p></section>
 {% endfor %}
 
-<section class="card">
-  <details class="more"{% if not p.places %} open{% endif %}>
-    <summary>+ 가는 곳 더하기</summary>
+<details class="add-box"{% if not p.places %} open{% endif %}>
+    <summary>장소 추가하기</summary>
     {% set r = {"name": "", "weekdays": [], "meals_out": 0, "meal_price": 0, "round_trip_fare": 0, "start_date": none, "end_date": none} %}
     <form method="post" action="/settings/places/add">
       {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
@@ -81,8 +80,7 @@
         </div>
       </details>
 
-      <button type="submit" class="btn btn-sub">넣기</button>
+      <button type="submit" class="btn">넣기</button>
     </form>
   </details>
-</section>
 {% endblock %}
