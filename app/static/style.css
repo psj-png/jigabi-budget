@@ -514,3 +514,6 @@ h1, h2, .big-money, .top h1, .page-title h1 { letter-spacing: -0.5px; }
 .label, .field { font-size: 13px; line-height: 18px; }
 .small, .row-sub { font-size: 12px; line-height: 17px; }
 
+/* 아래 메뉴: 고른 칸은 아이콘 뒤에 알약 */
+.tabbar a[aria-current="page"] svg { box-sizing: content-box; padding: 3px 14px; border-radius: 14px; background: var(--blue-soft); stroke-width: 2.2; }
+
