@@ -158,7 +158,7 @@ input, select, textarea { font-size: 16px; }  /* 16px보다 작으면 아이폰�
 .ladder { list-style: none; margin: 0; padding: 0; }
 .ladder li { display: flex; align-items: center; gap: 8px; min-height: 36px; }
 .ladder .mark { flex: none; width: 10px; height: 30px; border-radius: 5px; background: var(--st); }
-.ladder .jua { font-size: 17px; }
+.ladder .jua { font-family: 'Pretendard', sans-serif; font-size: 17px; font-weight: 700; }
 .result-char { flex: none; text-align: center; width: 112px; }
 .result-char p { margin: 0; font-size: 12px; color: var(--muted); }
 .tag { display: inline-block; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 500; line-height: 20px; background: var(--blue); color: #FFFFFF; }
@@ -549,6 +549,20 @@ body:has(input:focus, textarea:focus) .fab { display: none; }
 .toggle-row:not(:has(input:checked)) + .money-input { display: none; }
 .btn-pair { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: 12px; }
 .btn-pair .btn { margin-top: 0; }
+
+/* 장바구니: 캡처 올리기 상자 */
+.drop { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 16px; border: 2px dashed var(--border); border-radius: 16px; text-align: center; cursor: pointer; }
+.drop input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.drop .drop-icon { display: flex; align-items: center; justify-content: center; width: 60px; height: 60px; border-radius: 50%; background: var(--blue-soft); color: var(--blue); }
+.drop .drop-icon svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.drop b { font-size: 16px; }
+.drop .small { margin: 0; }
+.drop .drop-btn { display: inline-flex; align-items: center; min-height: 40px; margin-top: 4px; padding: 0 16px; border: 1px solid var(--border); border-radius: 12px; background: #FFFFFF; font-size: 14px; font-weight: 700; }
+.manual { margin-top: 10px; border-top: 1px solid var(--line); }
+.manual > summary { display: flex; align-items: center; justify-content: center; min-height: 48px; color: var(--blue-dark); font-weight: 500; cursor: pointer; list-style: none; }
+.manual > summary::-webkit-details-marker { display: none; }
+.manual > summary::after { content: ""; width: 7px; height: 7px; margin-left: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); }
+.manual[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
 
 /* 글자 크기 체계 (도틀로 타이포): 제목은 자간 -0.5px, 본문 15/22 */
 body { line-height: 22px; }

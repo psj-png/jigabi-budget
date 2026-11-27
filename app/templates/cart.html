@@ -5,24 +5,33 @@
 {% block content %}
 {# 사고 싶은 것 추가 폼: 빈 장바구니 카드와 아래 카드에서 같이 쓴다 #}
 {% macro add_form(today_q, now, cap, ai_on) %}
+{% set filled = cap and (cap.name or cap.price) %}
 {% if ai_on %}
-{# 캡처로 담기 (R20): AI는 칸만 채우고, 저장은 아래 [추가]로 #}
+{# 캡처로 담기 (R20): 사진을 고르는 순간 읽는다. AI는 칸만 채우고, 저장은 아래 [추가]로 #}
 <form method="post" action="/cart/capture" enctype="multipart/form-data" class="capture">
   {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-  <label class="field">쇼핑 화면 캡처로 채우기<input type="file" name="shot" accept="image/png,image/jpeg,image/webp" required></label>
-  <button type="submit" class="btn btn-sub">캡처 읽기</button>
-  <p class="small">캡처는 이름과 가격을 읽는 데만 쓰고 저장하지 않아요.</p>
+  <label class="drop">
+    <span class="drop-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+    <b>{% if filled %}다른 캡처로 다시 읽기{% else %}쇼핑 캡처를 올려 주세요{% endif %}</b>
+    <span class="small">이름과 가격을 지갑이가 읽어요 · png, jpg, webp 5MB까지</span>
+    <span class="drop-btn">사진 고르기</span>
+    <input type="file" name="shot" accept="image/png,image/jpeg,image/webp" required aria-label="쇼핑 캡처 고르기" onchange="this.form.submit()">
+  </label>
+  <noscript><button type="submit" class="btn btn-sub">캡처 읽기</button></noscript>
+  <p class="small center-note">캡처는 이름과 가격을 읽는 데만 쓰고 저장하지 않아요</p>
 </form>
 {% endif %}
 {% if cap and cap.error %}<div class="warn">{{ cap.error }}</div>{% endif %}
-{% if cap and (cap.name or cap.price) %}<div class="notice">지갑이가 캡처에서 읽은 값이에요. 틀리면 고친 뒤 [추가]를 눌러 주세요.</div>{% endif %}
+{% if filled %}<div class="notice">캡처에서 읽었어요. 맞는지 확인하고 [추가]를 눌러 주세요.</div>{% endif %}
+{% if ai_on and not filled %}<details class="manual"><summary>직접 적을게요</summary>{% endif %}
 <form method="post" action="/cart/items" id="add">
   {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
   <label class="field">이름<input type="text" name="name" maxlength="60" required value="{{ cap.name if cap else '' }}"{% if cap and cap.name %} class="ai-filled"{% endif %}></label>
-  <label class="field">가격 (원)<input type="number" name="price" min="1" required value="{{ cap.price if cap else '' }}"{% if cap and cap.price %} class="ai-filled"{% endif %}></label>
+  <label class="field">가격 (할인 뒤 낼 돈)<input type="number" name="price" min="1" required value="{{ cap.price if cap else '' }}"{% if cap and cap.price %} class="ai-filled"{% endif %}></label>
   <label class="field">필요한 날 (비워도 돼요)<input type="date" name="need_by" min="{{ now }}"></label>
-  <button type="submit" class="btn btn-sub">추가</button>
+  <button type="submit" class="btn{% if not filled %} btn-sub{% endif %}">추가</button>
 </form>
+{% if ai_on and not filled %}</details>{% endif %}
 {% endmacro %}
 {% set q = ("?today=" ~ today_q) if today_q else "" %}
 <div class="top">
@@ -114,9 +123,9 @@
         <label class="check-row">
           <input type="checkbox" name="item" value="{{ it.id }}" {% if it.checked %}checked{% endif %} onchange="this.form.submit()">
           <span class="row-main"><b>{{ it.name }}</b>
-            <span class="row-sub">{% if it.need_by %}필요한 날 {{ it.need_by.month }}/{{ it.need_by.day }}{% else %}언제든{% endif %}</span></span>
+            <span class="row-sub">{% if it.need_by %}{{ it.need_by.month }}/{{ it.need_by.day }}까지 필요해요{% else %}급하지 않아요{% endif %}</span></span>
           <span class="row-end"><b>{{ "{:,}".format(it.price) }}원</b>
-            {% if it.chip %}<span class="jua-chip st-{{ it.chip }}">{{ it.chip }}</span>{% endif %}</span>
+            {% if it.chip %}<span class="jua-chip st-{{ it.chip }}">사면 {{ it.chip }}</span>{% endif %}</span>
         </label>
         {% if it.url %}<a class="row-link" href="{{ it.url }}" target="_blank" rel="noopener">무신사</a>{% endif %}
       </li>
@@ -149,7 +158,6 @@
     {% endfor %}
   </ul>
   {% endif %}
-  <p class="note">칩은 그것 하나만 샀을 때 지갑이 단계예요.</p>
 </section>
 
 {# d) 사고 싶은 것 추가 #}
@@ -162,7 +170,7 @@
 
 {# e) 최근 산 것 #}
 <section class="card">
-  <div class="card-head"><b>최근 산 것</b><span class="small">산 날 빼고 7일 안 반품 가능</span></div>
+  <div class="card-head"><b>최근 산 것</b><span class="small">산 날 빼고 7일 안에 취소할 수 있어요</span></div>
   {% if c.recent %}
   <ul class="rows">
     {% for it in c.recent %}
@@ -172,7 +180,7 @@
       <span class="row-end"><b>{{ "{:,}".format(it.price) }}원</b></span>
       <form method="post" action="/cart/{{ it.item_id }}/return">
         {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-        <button type="submit" class="btn-small">반품</button>
+        <button type="submit" class="btn-small">구매 취소</button>
       </form>
     </li>
     {% endfor %}

@@ -47,7 +47,7 @@ def page_extras(request):
     if kind == "bought" and ids:
         extras["toast"] = {"text": "샀어요", "undo": "/cart/unbuy", "ids": ids, "back": back}
     elif kind == "returned" and ids:
-        extras["toast"] = {"text": "반품했어요", "undo": f"/cart/{ids[0]}/unreturn", "ids": [], "back": back}
+        extras["toast"] = {"text": "구매를 취소했어요", "undo": f"/cart/{ids[0]}/unreturn", "ids": [], "back": back}
     elif kind == "saved":
         extras["toast"] = {"text": "저장했어요", "undo": None, "ids": [], "back": back}
     elif kind == "ready":
@@ -637,7 +637,7 @@ def cart_return(request: Request, item_id: int, today: str = Form(None), back: s
     finally:
         conn.close()
     if not done:
-        raise HTTPException(status_code=400, detail="반품할 수 없어요 (산 날 빼고 7일 안, 산 것만)")
+        raise HTTPException(status_code=400, detail="구매를 취소할 수 없어요 (산 날 빼고 7일 안, 산 것만)")
     # 확인 화면 대신 [되돌리기] 띠 (22). 다시 짜기 화면에서 반품했으면 그 화면으로
     page = "/replan" if back == "replan" else "/cart"
     return RedirectResponse(url_with(page, today, toast="returned", ids=item_id), status_code=303)

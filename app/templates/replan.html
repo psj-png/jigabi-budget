@@ -39,7 +39,7 @@
 <section class="card step">
   <span class="num">1</span>
   <div class="step-main">
-    <h3>반품하기</h3>
+    <h3>구매 취소하기</h3>
     <p>산 날 빼고 7일 안이면 사기 전으로 돌아가요.</p>
     {% if r.returnable %}
     <ul class="rows">
@@ -49,13 +49,13 @@
         <form method="post" action="/cart/{{ it.item_id }}/return">
           <input type="hidden" name="back" value="replan">
           {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-          <button type="submit" class="btn-small">반품할게요</button>
+          <button type="submit" class="btn-small">구매 취소</button>
         </form>
       </li>
       {% endfor %}
     </ul>
     {% else %}
-    <p>반품할 수 있는 물건이 없어요</p>
+    <p>취소할 수 있는 물건이 없어요</p>
     {% endif %}
   </div>
 </section>
