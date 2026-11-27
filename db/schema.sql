@@ -4,6 +4,8 @@ CREATE DATABASE IF NOT EXISTS jigabi DEFAULT CHARACTER SET utf8mb4;
 USE jigabi;
 
 -- 처음부터 다시 만들 때
+DROP TABLE IF EXISTS plan_changes;
+DROP TABLE IF EXISTS chat_messages;
 DROP TABLE IF EXISTS loans;
 DROP TABLE IF EXISTS periods;
 DROP TABLE IF EXISTS balance_logs;
