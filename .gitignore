@@ -8,3 +8,4 @@ venv/
 .vscode/
 jigabi-all.patch
 patches/
+test_capture.png
