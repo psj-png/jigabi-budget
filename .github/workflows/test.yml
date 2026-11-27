@@ -28,7 +28,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"  # Dockerfile과 같은 버전
-      - run: pip install -r requirements.txt pytest
+      - run: pip install -r requirements.txt pytest httpx
       - name: "pytest (OPENAI_API_KEY 없이, AI 테스트는 가짜 응답)"
         run: |
           python -m pytest -q -rs | tee result.txt
