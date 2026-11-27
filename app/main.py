@@ -166,14 +166,68 @@ def set_login_cookie(response, public_id):
 
 
 # ---- 첫 설정 (흐름 2): 다섯 단계, 칸은 예시로 채워 두고 고치게 한다 ----
-def render_setup(request, d, step, today, error=None, editing=False, picking=False, ask_del=None):
+def period_months(start, end, today):
+    # 첫 설정 '한 달을 어디서 나눌까요?': 기간이 걸친 달마다 달력(일요일부터)을 그리고 기간을 띠로 칠한다.
+    # 기간 날이 하나도 없는 주는 뺀다. 칸마다 class를 여기서 정해 템플릿은 그리기만 한다
+    months = []
+    first = start.replace(day=1)
+    while first <= end:
+        weeks = []
+        for week in calendar.Calendar(firstweekday=6).monthdatescalendar(first.year, first.month):
+            if not any(start <= d <= end and d.month == first.month for d in week):
+                continue
+            cells = []
+            for d in week:
+                if d.month != first.month:
+                    cells.append(None)
+                    continue
+                cls = []
+                if start <= d <= end:
+                    cls.append("in")
+                    before, after = d - timedelta(days=1), d + timedelta(days=1)
+                    # 띠의 왼쪽 끝: 기간 첫날, 일요일, 달의 첫날 / 오른쪽 끝: 기간 끝날, 토요일, 달의 끝날
+                    if d == start or d.weekday() == 6 or before.month != d.month:
+                        cls.append("first")
+                    if d == end or d.weekday() == 5 or after.month != d.month:
+                        cls.append("last")
+                if d == start or d == end:
+                    cls.append("on")
+                if d == today:
+                    cls.append("today")
+                if d < today:
+                    cls.append("past")
+                cells.append({"day": d.day, "cls": " ".join(cls)})
+            weeks.append(cells)
+        months.append({"first": first, "weeks": weeks})
+        first = (first + timedelta(days=32)).replace(day=1)
+    return months
+
+
+def render_setup(request, d, step, today, error=None, editing=False, picking=False, ask_del=None, pick_row=None):
     look = None
+    period = None
+    months = []
+    now = parse_date(today, date.today())
     if step == setup.LAST_STEP:
         try:
-            look = setup.preview(setup.draft_data(d), parse_date(today, date.today()))
+            # 고르는 중(pick_row)이면 그 줄로 나눴을 때를 미리 본다. 저장은 [이걸로 할게요]에서
+            shown = dict(d, main=str(pick_row)) if pick_row is not None else d
+            look = setup.preview(setup.draft_data(shown), now)
         except setup.FormError as e:
             return render_setup(request, d, 1, today, str(e))
+        if picking:
+            months = period_months(look["start"], look["end"], now)
+    if step == 2:
+        # 2/5 아래 한 줄: 지금 적은 돈 들어오는 날로 한 달을 어떻게 나누는지 (못 읽으면 안 보여 준다)
+        try:
+            data = setup.draft_data(d)
+            start, end = setup.first_period(data, now)
+            period = {"main": [i for i in data["incomes"] if i["is_main"]][0], "start": start, "end": end}
+        except setup.FormError:
+            period = None
     return templates.TemplateResponse(request, "setup_step.html", {
+        "period": period, "months": months,
+        "pick_row": pick_row if pick_row is not None else (next((c["row"] for c in look["choices"] if c["main"]), None) if look else None),
         "step": step, "d": d, "draft_json": json.dumps(d, ensure_ascii=False),
         "today_q": today, "error": error, "editing": editing, "look": look, "picking": picking, "ask_del": ask_del,
         "examples": setup.example_left(d), "example_incomes": setup.EXAMPLE_INCOMES,
@@ -201,7 +255,9 @@ async def setup_step(request: Request):
     go = form.get("go") or "next"
 
     if form.get("picking") == "1":
-        # 5/5의 [바꾸기]에서 연 '어디서 나눌까요?' 화면: 고른 줄을 적고 5/5로 돌아간다
+        # 5/5의 기간 줄에서 연 '어디서 나눌까요?' 화면: 칩을 누르면 그 줄로 다시 그리고, [이걸로 할게요]면 적고 5/5로
+        if (form.get("try") or "").isdigit():
+            return render_setup(request, d, setup.LAST_STEP, today, picking=True, pick_row=int(form.get("try")))
         if go != "back" and form.get("main") is not None:
             d["main"] = form.get("main")
         return render_setup(request, d, setup.LAST_STEP, today)

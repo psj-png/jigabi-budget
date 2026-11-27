@@ -256,7 +256,6 @@ input, select, textarea { font-size: 16px; }  /* 16px보다 작으면 아이폰�
 .pair .amt { flex: 1; }
 .pair { white-space: nowrap; }
 .main-pick { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 4px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 13px; color: var(--muted); }
-.pick-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 4px; border-bottom: 1px solid var(--border); font-size: 15px; }
 .main-pick:has(input:checked) { background: var(--blue-soft); border-color: var(--blue); color: var(--blue-dark); font-weight: 700; }
 .field-pair { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 8px; }
 .field-pair label { flex: 1; font-size: 14px; }
@@ -687,3 +686,12 @@ h1, h2, .big-money, .top h1, .page-title h1 { letter-spacing: -0.5px; }
 .chat-status .jg { flex: none; }
 .chat-status p { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
 .chat-status p b { color: var(--text); }
+
+/* 11/28 첫 설정 기간: 2/5 아래 한 줄, 5/5 '어디서 나눌까요?'는 달력 띠 (약속 탭 달력과 같은 칸) */
+.period-line { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--blue-soft); font-size: 14px; }
+.period-line svg { flex: none; width: 20px; height: 20px; margin-top: 1px; fill: none; stroke: var(--blue); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.period-line b { color: var(--blue-dark); }
+.period-line small { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.cal-grid.gap-bottom { margin-bottom: 14px; }
+.period-sum { display: flex; justify-content: space-between; align-items: baseline; margin: 12px 0 4px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 16px; }
+.period-sum span { color: var(--muted); font-size: 14px; }

@@ -328,7 +328,7 @@ def preview(data, today):
     start, end = first_period(data, today)
     main = [i for i in data["incomes"] if i["is_main"]][0]
     choices = [{"row": i.get("row", k), "name": i["name"], "range": period_text(i["day_of_month"]),
-                "main": i["is_main"]} for k, i in enumerate(data["incomes"])]
+                "day": i["day_of_month"], "main": i["is_main"]} for k, i in enumerate(data["incomes"])]
     days_left = (end - today).days + 1
     income = calc.incomes_sum(today, end, data["incomes"])
     fixed = calc.monthly_sum(today, end, data["fixed"])

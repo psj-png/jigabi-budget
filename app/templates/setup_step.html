@@ -30,13 +30,24 @@
   {% if error %}<div class="warn">{{ error }}</div>{% endif %}
 
   {% if picking %}
-  {# 5/5-b 기간 시작일 바꾸기: 라디오로 고르고 [이걸로 할게요]. JS 없이 form으로 #}
+  {# 5/5-b 기간 시작일 바꾸기: 돈 들어오는 날 칩을 누르면 그 날로 나눈 기간을 달력 띠로 보여 준다 (JS 없이 form으로) #}
+  {% set days = ["월", "화", "수", "목", "금", "토", "일"] %}
   <h1 class="split-title">한 달을 어디서 나눌까요?</h1>
+  <p class="top-sub" style="margin-top: 0">돈 들어오는 날 중에서 골라요. 보통 가장 큰 돈이 들어오는 날이에요.</p>
+  <input type="hidden" name="main" value="{{ pick_row }}">
+  <div class="chips quick">
+    {% for c in look.choices %}<button type="submit" class="chip pick-link{% if c.row == pick_row %} pick-on{% endif %}" name="try" value="{{ c.row }}" formnovalidate>{{ c.name }} · {{ c.day }}일</button>{% endfor %}
+  </div>
   <section class="card">
-    {% for c in look.choices %}
-    <label class="pick-row"><input type="radio" name="main" value="{{ c.row }}"{% if c.main %} checked{% endif %}><span>{{ c.name }} 날 기준 · {{ c.range }}</span></label>
+    {% for mo in months %}
+    <div class="cal-head"><b>{{ mo.first.year }}년 {{ mo.first.month }}월</b></div>
+    <div class="cal-grid{% if not loop.last %} gap-bottom{% endif %}">
+      {% for w in ["일", "월", "화", "수", "목", "금", "토"] %}<span class="cal-wd">{{ w }}</span>{% endfor %}
+      {% for week in mo.weeks %}{% for c in week %}{% if c %}<span class="cal-day {{ c.cls }}"><span class="n">{{ c.day }}</span></span>{% else %}<span class="cal-day"></span>{% endif %}{% endfor %}{% endfor %}
+    </div>
     {% endfor %}
-    <p class="small">보통 가장 큰 돈이 들어오는 날로 나눠요.</p>
+    <p class="period-sum"><b>{{ look.start.month }}/{{ look.start.day }} ({{ days[look.start.weekday()] }}) ~ {{ look.end.month }}/{{ look.end.day }} ({{ days[look.end.weekday()] }})</b><span>{{ look.days_left }}일</span></p>
+    <p class="small">다음 기간부터는 {% for c in look.choices if c.row == pick_row %}{{ c.range }}{% endfor %}로 나눠요.</p>
   </section>
   <button type="submit" class="btn" name="go" value="next">이걸로 할게요</button>
 
@@ -68,6 +79,11 @@
   <section class="card"><p class="small">하나 이상 넣어 주세요.</p></section>
   {% endfor %}
   {% if d.incomes|length < rows_max.incomes %}<button type="submit" class="btn-small add-sq" name="go" value="add_income" formnovalidate aria-label="하나 더">+</button>{% endif %}
+  {% if period %}
+  {# 적은 돈 들어오는 날로 한 달을 어떻게 나누는지 미리 한 줄 (5/5에서 달력으로 바꿀 수 있다) #}
+  <p class="period-line"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>
+    <span><b>{{ period.main.name }} 날({{ period.main.day_of_month }}일)</b>마다 한 달을 나눠요 · {{ period.start.month }}/{{ period.start.day }} ~ {{ period.end.month }}/{{ period.end.day }}<small>마지막 확인 화면에서 바꿀 수 있어요</small></span></p>
+  {% endif %}
   <button type="submit" class="btn gap-top" name="go" value="next">다음</button>
 
   {% elif step == 3 %}

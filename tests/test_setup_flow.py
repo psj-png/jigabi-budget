@@ -120,3 +120,26 @@ def test_가는_곳_더하기_버튼은_하나():
     added = press(client, page, "add_routine")
     assert [r["name"] for r in draft_of(added)["routines"]] == ["학교", ""]
     assert 'placeholder="예: 알바, 학원"' in added
+
+
+def test_기간은_2단계에_한_줄로_보이고_5단계에서_칩으로_미리_본_뒤_정한다():
+    client = TestClient(app)
+    page = client.get(f"/setup?today={TODAY}").text
+    step2 = press(client, page, "next", balance="500000")
+    assert "알바비 날(25일) 마다 한 달을 나눠요 · 11/27 ~ 12/24" in text_of(step2)
+    page = press(client, press(client, press(client, step2, "next"), "next"), "next")  # 3/5 → 4/5 → 5/5
+    picking = press(client, page, "pick_main")
+    assert "11/27 (금) ~ 12/24 (목) 28일" in text_of(picking)
+    # 용돈(1일) 칩: 미리 보기만 하고 아직 정하지 않는다
+    reader = FormReader()
+    reader.feed(picking)
+    data = {}
+    for name, value in reader.fields:
+        data.setdefault(name, []).append(value)
+    data["try"] = ["1"]
+    tried = client.post("/setup/step", data=data).text
+    assert "11/27 (금) ~ 11/30 (월) 4일" in text_of(tried)
+    assert draft_of(tried)["main"] == ""
+    done = press(client, tried, "next")  # 이걸로 할게요
+    assert draft_of(done)["main"] == "1"
+    assert "용돈 날(1일)마다 새로 시작" in text_of(done) and "11/27~11/30 · 4일" in text_of(done)
