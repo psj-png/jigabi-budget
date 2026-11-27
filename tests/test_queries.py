@@ -899,7 +899,8 @@ def test_지난_기간_돌아보기(conn):
     s = hist["sel"]
     assert (s["start"], s["end"], s["days"], s["nights"], s["spent"]) == (
         date(2026, 10, 30), date(2026, 11, 24), 2, 1, 5800)
-    assert [b["spent"] for b in hist["bars"]] == [5800, None]
+    assert [b["spent"] for b in hist["bars"] if not b["future"]] == [5800, None]
+    assert len(hist["bars"]) == 26  # 막대 칸은 기간 끝(11/24)까지
     assert hist["diff"] is None
 
 

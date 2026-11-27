@@ -148,19 +148,23 @@ def make_history(conn, user_id, today, pick=None):
             row["end_stage"] = make_home(conn, user_id, p["end_date"], before_night=True).get("stage")
         rows.append(row)
     if not rows:
-        return {"rows": [], "sel": None, "prev": None, "diff": None, "bars": []}
+        return {"rows": [], "sel": None, "prev": None, "newer": None, "diff": None, "bars": [], "top": None}
     sel = next((r for r in rows if r["start"] == pick), rows[0])
     i = rows.index(sel)
     prev = rows[i + 1] if i + 1 < len(rows) else None
+    newer = rows[i - 1] if i > 0 else None
     diff = sel["spent"] - prev["spent"] if prev is not None and prev["nights"] and sel["nights"] else None
-    # 날짜별 막대: 적은 날은 쓴 돈, 안 적은 날은 비운다
+    # 날짜별 막대: 기간 끝날까지 칸을 잡고, 적은 날은 쓴 돈, 안 적은 날은 낮은 회색, 아직 안 온 날은 빈칸
     spent_by_day = {log["log_date"]: log["spent"] for log in sel["logs"]}
     top = max([v for v in spent_by_day.values() if v > 0], default=0)
     bars = []
     day = sel["start"]
-    while day <= sel["last"]:
+    while day <= sel["end"]:
         v = spent_by_day.get(day)
-        bars.append({"day": day, "spent": v,
+        bars.append({"day": day, "spent": v, "future": day > sel["last"],
                      "pct": max(v, 0) * 100 // top if v is not None and top else 0})
         day += timedelta(days=1)
-    return {"rows": rows, "sel": sel, "prev": prev, "diff": diff, "bars": bars}
+    # 가장 많이 쓴 날 (막대 위 한 줄)
+    top_log = max(sel["logs"], key=lambda log: log["spent"], default=None)
+    top = top_log if top_log is not None and top_log["spent"] > 0 else None
+    return {"rows": rows, "sel": sel, "prev": prev, "newer": newer, "diff": diff, "bars": bars, "top": top}

@@ -13,46 +13,69 @@
 <section class="card"><p class="small">아직 돌아볼 기간이 없어요.</p></section>
 {% else %}
 {% set s = hist.sel %}
-<section class="card">
-  <ul class="menu">
-    {% for r in hist.rows %}
-    <li><a href="/settings/history?start={{ r.start }}{{ qa }}"{% if r.start == s.start %} aria-current="true"{% endif %}><span>{{ r.start.month }}/{{ r.start.day }}~{{ r.end.month }}/{{ r.end.day }}{% if r.current %} · 지금 기간{% endif %}<small>{{ r.nights }}밤 적음 · 적은 날 쓴 돈 {{ "{:,}".format(r.spent) }}원{% if r.end_stage %} · 끝날 때 {{ r.end_stage }}{% endif %}</small></span></a></li>
-    {% endfor %}
-  </ul>
-</section>
+{# 기간을 화살표로 넘겨 본다 (왼쪽이 지난 기간) #}
+<div class="period-nav">
+  {% if hist.prev %}<a href="/settings/history?start={{ hist.prev.start }}{{ qa }}" aria-label="지난 기간"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>{% else %}<span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>{% endif %}
+  <div><b>{{ s.start.month }}/{{ s.start.day }} ~ {{ s.end.month }}/{{ s.end.day }}</b><small>{% if s.current %}지금 기간{% elif s.end_stage %}끝날 때 {{ s.end_stage }}{% else %}끝난 기간{% endif %}</small></div>
+  {% if hist.newer %}<a href="/settings/history?start={{ hist.newer.start }}{{ qa }}" aria-label="다음 기간"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></a>{% else %}<span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>{% endif %}
+</div>
 
-<section class="card">
-  <h2>{{ s.start.month }}/{{ s.start.day }}~{{ s.end.month }}/{{ s.end.day }}</h2>
-  <p class="small">{{ s.days }}일 중 {{ s.nights }}밤 적었어요. 적은 날만 쓴 돈을 알 수 있어요.</p>
-  <div class="bars" aria-hidden="true">
-    {% for b in hist.bars %}{% if b.spent is none %}<span class="none"></span>{% else %}<span style="height: {{ [b.pct, 4]|max }}%"></span>{% endif %}{% endfor %}
-  </div>
-  <div class="bars-axis small"><span>{{ s.start.month }}/{{ s.start.day }}</span><span>{{ s.last.month }}/{{ s.last.day }}</span></div>
+{# 이 기간에 쓴 돈: 잔액을 적은 날만 셀 수 있어서, 며칠 적었는지를 막대로 같이 보여 준다 #}
+<section class="card spend-card">
+  <span class="label">{% if s.current %}지금까지 쓴 돈{% else %}이 기간에 쓴 돈{% endif %}</span>
+  <b class="big-money">{{ "{:,}".format(s.spent) }}원</b>
+  <div class="log-meter" aria-hidden="true"><span style="width: {{ s.nights * 100 // s.days }}%"></span></div>
+  <p class="small"><b>{{ s.days }}일 중 {{ s.nights }}일</b> 잔액을 적었어요.{% if s.days > s.nights %} 안 적은 {{ s.days - s.nights }}일은 얼마 썼는지 몰라서 빼고 셌어요.{% endif %}</p>
   {% if hist.diff is not none %}
-  <p class="result-line">{% if hist.diff < 0 %}지난 기간보다 {{ "{:,}".format(-hist.diff) }}원 덜 썼어요{% elif hist.diff > 0 %}지난 기간보다 {{ "{:,}".format(hist.diff) }}원 더 썼어요{% else %}지난 기간과 똑같이 썼어요{% endif %}</p>
-  <p class="small">적은 날끼리 비교했어요.</p>
+  <p class="diff-line">{% if hist.diff < 0 %}지난 기간보다 <b>{{ "{:,}".format(-hist.diff) }}원 덜</b> 썼어요{% elif hist.diff > 0 %}지난 기간보다 <b>{{ "{:,}".format(hist.diff) }}원 더</b> 썼어요{% else %}지난 기간과 똑같이 썼어요{% endif %}</p>
   {% endif %}
 </section>
 
+<h2 class="sec-title">날마다 쓴 돈</h2>
 <section class="card">
-  <div class="card-head"><b>산 것</b></div>
+  {% if s.nights %}
+  {% if hist.top %}<p class="small">가장 많이 쓴 날 <b>{{ hist.top.log_date.month }}/{{ hist.top.log_date.day }} · {{ "{:,}".format(hist.top.spent) }}원</b></p>{% endif %}
+  <div class="bars" aria-hidden="true">
+    {% for b in hist.bars %}{% if b.future %}<span class="future"></span>{% elif b.spent is none %}<span class="none"></span>{% else %}<span style="height: {{ [b.pct, 4]|max }}%"></span>{% endif %}{% endfor %}
+  </div>
+  <div class="bars-axis small"><span>{{ s.start.month }}/{{ s.start.day }}</span><span>{{ s.end.month }}/{{ s.end.day }}</span></div>
+  <p class="bars-key"><span><i class="k-bar"></i>쓴 돈</span><span><i class="k-none"></i>안 적은 날</span>{% if s.current %}<span><i class="k-future"></i>아직 안 온 날</span>{% endif %}</p>
+  {% else %}
+  <div class="empty-state">
+    <span class="empty-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10M10 20V4M15 20v-7M20 20v-4"/></svg></span>
+    <b>아직 잔액을 적은 날이 없어요</b>
+    <p>밤마다 홈에서 잔액을 적으면 날마다 막대가 생겨요</p>
+  </div>
+  {% endif %}
+</section>
+
+<h2 class="sec-title">산 것</h2>
+<section class="card">
   {% if s.bought %}
   <ul class="rows">
     {% for it in s.bought %}
-    <li class="row"><span class="row-main"><b>{{ it.name }}</b><span class="row-sub">{{ it.bought_date.month }}/{{ it.bought_date.day }}{% if it.status == "returned" %} · 반품했어요{% endif %}</span></span><span class="row-end"><b>{{ "{:,}".format(it.price) }}원</b></span></li>
+    <li class="row"><span class="row-main"><b>{{ it.name }}</b><span class="row-sub">{{ it.bought_date.month }}/{{ it.bought_date.day }}{% if it.status == "returned" %} · 구매 취소{% endif %}</span></span><span class="row-end"><b>{{ "{:,}".format(it.price) }}원</b></span></li>
     {% endfor %}
   </ul>
   {% else %}
-  <p class="small">없어요</p>
+  <div class="empty-state">
+    <span class="empty-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1 12H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></span>
+    <b>이 기간엔 산 게 없어요</b>
+    <p>장바구니에서 [살게요]를 누르면 여기에 남아요</p>
+    {% if s.current %}<a class="btn-small" href="/cart{{ q }}">장바구니 보기</a>{% endif %}
+  </div>
   {% endif %}
-  {% if s.loans %}
-  <div class="card-head gap-top"><b>비상금에서 빌린 돈</b></div>
+</section>
+
+{% if s.loans %}
+<h2 class="sec-title">비상금에서 빌린 돈</h2>
+<section class="card">
   <ul class="rows">
     {% for x in s.loans %}
     <li class="row"><span class="row-main"><b>{{ x.borrowed_on.month }}/{{ x.borrowed_on.day }}</b></span><span class="row-end"><b>{{ "{:,}".format(x.amount) }}원</b></span></li>
     {% endfor %}
   </ul>
-  {% endif %}
 </section>
+{% endif %}
 {% endif %}
 {% endblock %}

@@ -624,3 +624,29 @@ h1, h2, .big-money, .top h1, .page-title h1 { letter-spacing: -0.5px; }
 .add-box[open] { padding: 16px; border-radius: 20px; background: var(--card); box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px rgba(16, 24, 40, 0.05); }
 .add-box[open] > summary { margin-bottom: 12px; }
 
+/* 11/28 지난 기간 돌아보기: < 기간 > → 쓴 돈과 적은 날 → 날마다 막대 → 산 것 (빈 칸은 그림과 한 줄) */
+.period-nav { display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px; }
+.period-nav > div { text-align: center; }
+.period-nav b { display: block; font-size: 18px; }
+.period-nav small { font-size: 12px; color: var(--blue-dark); }
+.period-nav a, .period-nav > span { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: var(--card); color: var(--text); }
+.period-nav > span { color: var(--border); background: transparent; }
+.period-nav svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.spend-card .big-money { display: block; margin-bottom: 12px; }
+.log-meter { height: 8px; margin-bottom: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.log-meter span { display: block; height: 100%; border-radius: 4px; background: var(--blue); }
+.spend-card .small { margin: 0; }
+.diff-line { margin: 12px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 15px; }
+.bars span.future { height: 0; background: transparent; }
+.bars-key { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.bars-key i { display: inline-block; margin-right: 4px; vertical-align: middle; border-radius: 2px; }
+.bars-key .k-bar { width: 10px; height: 10px; background: #93C5FD; }
+.bars-key .k-none { width: 10px; height: 4px; background: var(--line); }
+.bars-key .k-future { width: 10px; height: 10px; border: 1px dashed var(--border); }
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 0 4px; text-align: center; }
+.empty-ico { display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; margin-bottom: 4px; border-radius: 50%; background: var(--blue-soft); }
+.empty-ico svg { width: 26px; height: 26px; fill: none; stroke: var(--blue); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.empty-state b { font-size: 15px; }
+.empty-state p { margin: 0; font-size: 13px; color: var(--muted); }
+.empty-state .btn-small { margin-top: 6px; text-decoration: none; }
+
