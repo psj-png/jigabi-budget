@@ -31,7 +31,7 @@ def make_cart(conn, user_id, today, selected):
             # 그것 하나만 샀을 때 단계
             chip = calc.preview(h["free"], h["days_left"], w["price"], user["comfort_daily"])[1]
         items.append({"id": w["item_id"], "name": w["name"], "price": w["price"],
-                      "need_by": w["need_by"], "chip": chip, "checked": w["item_id"] in selected})
+                      "need_by": w["need_by"], "url": w.get("url"), "chip": chip, "checked": w["item_id"] in selected})
 
     # 계획한 것(예: 11/25에 사기로 함)과 최근 산 것(반품할 수 있는 것)
     planned = [i for i in all_items if i["status"] == "planned"]

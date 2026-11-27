@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import balance as balance_page
-from app import ai, calc, cart, purchase, queries, replan, settings, setup, split
+from app import ai, calc, cart, purchase, queries, replan, settings, setup, shop, split
 from app.db import get_conn
 from app.home import make_home
 
@@ -50,6 +50,8 @@ def page_extras(request):
         extras["toast"] = {"text": "저장했어요", "undo": None, "ids": [], "back": back}
     elif kind == "ready":
         extras["toast"] = {"text": "준비 끝! 기록은 이 기기에 저장돼요", "undo": None, "ids": [], "back": back}
+    elif kind == "added":
+        extras["toast"] = {"text": "장바구니에 담았어요", "undo": None, "ids": [], "back": back}
     return extras
 
 
@@ -281,6 +283,7 @@ def render_home(request, user_id, now, today, day=None, mode=None, guess=None, e
         conn.close()
     return templates.TemplateResponse(request, "home.html", {
         "h": data, "card": card, "summary": summary, "wish_count": wish_count, "today_q": today,
+        "ai_on": ai.enabled(),
     })
 
 
@@ -694,6 +697,66 @@ def split_save(request: Request, item: list[int] = Form(default=[]), today: str 
     if not done:
         raise HTTPException(status_code=400, detail="저장할 계획이 없어요")
     return RedirectResponse(url_with("/", today), status_code=303)
+
+
+# ---- 지갑이 채팅: 무신사 쇼핑 추천 (R21). 키가 없으면 없는 화면 ----
+@app.get("/chat")
+def chat_get(request: Request, today: str = None):
+    user_id = current_user(request)
+    if user_id is None:
+        return to_start()
+    if not ai.enabled():
+        raise HTTPException(status_code=404)
+    now = pick_now(request, today)
+    conn = get_conn()
+    try:
+        data = shop.make_chat(conn, user_id, now)
+    finally:
+        conn.close()
+    return templates.TemplateResponse(request, "chat.html", {"chat": data, "today_q": today})
+
+
+@app.post("/chat")
+async def chat_post(request: Request):
+    user_id = current_user(request)
+    if user_id is None:
+        return to_start()
+    if not ai.enabled():
+        raise HTTPException(status_code=404)
+    stop = demo_stop(request)  # 예시 사람은 대화를 저장하지 않는다 (R16)
+    if stop:
+        return stop
+    form = await request.form()
+    today = form.get("today") or None
+    now = pick_now(request, today)
+    image = None
+    shot = form.get("shot")
+    if shot is not None and hasattr(shot, "read"):
+        image = await shot.read(ai.MAX_BYTES + 1) or None
+    conn = get_conn()
+    try:
+        shop.ask(conn, user_id, now, form.get("text"), image)
+    finally:
+        conn.close()
+    return RedirectResponse(url_with("/chat", today) + "#last", status_code=303)
+
+
+@app.post("/chat/add")
+def chat_add(request: Request, name: str = Form(min_length=1, max_length=60), price: int = Form(ge=1),
+             url: str = Form(""), today: str = Form(None)):
+    # 추천 카드의 [장바구니에 담기]: 무신사 링크까지 같이 담는다
+    user_id = current_user(request)
+    if user_id is None:
+        return to_start()
+    stop = demo_stop(request)
+    if stop:
+        return stop
+    conn = get_conn()
+    try:
+        queries.insert_wish_item(conn, user_id, name, price, None, url[:500] if ai.is_shop_url(url) else None)
+    finally:
+        conn.close()
+    return RedirectResponse(url_with("/chat", today, toast="added") + "#last", status_code=303)
 
 
 # ---- 설정 (흐름 6) ----

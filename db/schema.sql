@@ -81,6 +81,7 @@ CREATE TABLE wish_items (
     name VARCHAR(60) NOT NULL,
     price INT NOT NULL,
     need_by DATE NULL,
+    url VARCHAR(500) NULL,  -- 채팅에서 담은 무신사 상품 링크 (R21)
     status ENUM('wish', 'planned', 'bought', 'returned') NOT NULL DEFAULT 'wish',
     planned_date DATE NULL,
     bought_date DATE NULL,
@@ -117,5 +118,18 @@ CREATE TABLE loans (
     user_id INT NOT NULL,
     borrowed_on DATE NOT NULL,
     amount INT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- 지갑이 채팅 (R21): 무신사 쇼핑 추천 대화. 하루 물어본 횟수는 chat_day로 센다
+CREATE TABLE chat_messages (
+    message_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    chat_day DATE NOT NULL,
+    role ENUM('user', 'assistant') NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    items_json JSON NULL,  -- 지갑이가 고른 상품 카드 (이름·가격·링크·이유)
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_chat_user_day (user_id, chat_day),
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );

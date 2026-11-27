@@ -118,6 +118,7 @@
           <span class="row-end"><b>{{ "{:,}".format(it.price) }}원</b>
             {% if it.chip %}<span class="jua-chip st-{{ it.chip }}">{{ it.chip }}</span>{% endif %}</span>
         </label>
+        {% if it.url %}<a class="row-link" href="{{ it.url }}" target="_blank" rel="noopener">무신사</a>{% endif %}
       </li>
       {% endfor %}
     </ul>
@@ -195,5 +196,9 @@
 {% if c.logged %}<p class="center-note">오늘 밤 잔액을 적은 뒤에 산 것은 적은 잔액에서 뺐어요</p>{% endif %}
 {% endif %}
 {% endif %}
+{% endif %}
+{# 지갑이 채팅 버튼 (R21): 키가 있을 때만 #}
+{% if ai_on %}
+<a class="fab" href="/chat{{ ("?today=" ~ today_q) if today_q else "" }}" aria-label="지갑이에게 물어보기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v10H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></a>
 {% endif %}
 {% endblock %}

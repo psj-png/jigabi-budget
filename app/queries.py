@@ -240,18 +240,19 @@ def get_wish_items(conn, user_id):
     # 아직 안 산 것(wish)만
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT item_id, name, price, need_by FROM wish_items "
+            "SELECT item_id, name, price, need_by, url FROM wish_items "
             "WHERE user_id = %s AND status = 'wish' ORDER BY item_id",
             (user_id,),
         )
         return cur.fetchall()
 
 
-def insert_wish_item(conn, user_id, name, price, need_by):
+def insert_wish_item(conn, user_id, name, price, need_by, url=None):
+    # url: 채팅에서 담은 무신사 상품 링크 (없으면 NULL)
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO wish_items (user_id, name, price, need_by) VALUES (%s, %s, %s, %s)",
-            (user_id, name, price, need_by),
+            "INSERT INTO wish_items (user_id, name, price, need_by, url) VALUES (%s, %s, %s, %s, %s)",
+            (user_id, name, price, need_by, url),
         )
     conn.commit()
 
@@ -572,3 +573,36 @@ def get_balance_logs(conn, user_id, start, end):
             (user_id, start, end),
         )
         return cur.fetchall()
+
+
+# ---- 지갑이 채팅 (R21) ----
+def insert_chat(conn, user_id, day, role, content, items_json=None):
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO chat_messages (user_id, chat_day, role, content, items_json) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            (user_id, day, role, content, items_json),
+        )
+    conn.commit()
+
+
+def get_chat(conn, user_id, limit):
+    # 최근 limit개를 오래된 것부터
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT message_id, role, content, items_json FROM chat_messages "
+            "WHERE user_id = %s ORDER BY message_id DESC LIMIT %s",
+            (user_id, limit),
+        )
+        rows = cur.fetchall()
+    return list(reversed(rows))
+
+
+def count_chat_today(conn, user_id, day):
+    # 그날 사용자가 보낸 말 수 (idx_chat_user_day를 탄다)
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT COUNT(*) AS n FROM chat_messages WHERE user_id = %s AND chat_day = %s AND role = 'user'",
+            (user_id, day),
+        )
+        return cur.fetchone()["n"]

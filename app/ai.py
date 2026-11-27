@@ -30,6 +30,7 @@ ERRORS = {
     "size": "캡처가 너무 커요. 5MB까지 올릴 수 있어요",
     "fail": "캡처를 읽지 못했어요. 이름과 가격을 직접 적어 주세요",
     "none": "캡처에서 상품 이름이나 가격을 찾지 못했어요. 직접 적어 주세요",
+    "search": "지금은 무신사를 찾지 못했어요. 잠시 뒤에 다시 물어봐 주세요",
 }
 
 
@@ -105,3 +106,138 @@ def read_item(data, call=None):
     if item["name"] is None and item["price"] is None:
         return None, "none"
     return item, None
+
+
+# ---- 쇼핑 추천 (R21): OpenAI 웹 검색을 무신사(musinsa.com)로만 좁혀서 상품을 고른다 ----
+RESPONSES_URL = "https://api.openai.com/v1/responses"
+SHOP_DOMAIN = "musinsa.com"
+MAX_PICKS = 4
+SHOP_PROMPT = (
+    "너는 대학생 가계부 앱 '지갑이'의 쇼핑 도우미야. 무신사(musinsa.com) 안에서만 웹 검색으로 상품을 찾아.\n"
+    "- 사용자가 찾는 물건과 비슷한 상품을 최대 4개 골라. 캡처가 있으면 캡처 속 상품과 비슷한 걸 찾아.\n"
+    "- 예산: {budget} 예산 안의 상품을 먼저 고르고, 넘는 상품은 넘는다고 말해.\n"
+    "- 검색해서 실제로 본 무신사 상품 페이지만 추천하고, url은 그 상품 페이지 주소를 그대로 써. "
+    "없는 상품이나 주소를 지어내지 마.\n"
+    "- price는 페이지에 보이는 판매가(할인 적용)를 원 단위 정수로. 모르면 null.\n"
+    "- reason은 고른 이유 한 줄(소재, 핏, 가격 등).\n"
+    "- reply는 두 문장 이내, 친근한 '해요'체. 사지 말라고 훈계하지 말고 예산은 숫자로 짧게.\n"
+    "- 쇼핑과 관계없는 부탁이면 items는 비우고, reply로 무신사에서 찾을 물건을 말해 달라고 해."
+)
+SHOP_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "reply": {"type": "string"},
+        "items": {"type": "array", "items": {
+            "type": "object",
+            "properties": {"name": {"type": "string"}, "price": {"type": ["integer", "null"]},
+                           "url": {"type": "string"}, "reason": {"type": "string"}},
+            "required": ["name", "price", "url", "reason"],
+            "additionalProperties": False,
+        }},
+    },
+    "required": ["reply", "items"],
+    "additionalProperties": False,
+}
+
+
+def post_responses(payload):
+    # OpenAI Responses API를 한 번 부른다 (웹 검색이 있어 오래 걸릴 수 있다)
+    req = urllib.request.Request(
+        RESPONSES_URL, data=json.dumps(payload).encode("utf-8"), method="POST",
+        headers={"Content-Type": "application/json",
+                 "Authorization": "Bearer " + os.getenv("OPENAI_API_KEY", "")},
+    )
+    with urllib.request.urlopen(req, timeout=90) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def page_key(url):
+    # 주소 비교용: 'https://www.musinsa.com/products/1?x=1' -> 'musinsa.com/products/1'
+    rest = str(url).split("://", 1)[-1].split("#", 1)[0].split("?", 1)[0]
+    host, _, path = rest.partition("/")
+    host = host.lower()
+    for prefix in ("www.", "m."):
+        if host.startswith(prefix):
+            host = host[len(prefix):]
+    return host + "/" + path.rstrip("/")
+
+
+def is_shop_url(url):
+    # 무신사 주소인가 (하위 도메인 포함)
+    url = str(url or "")
+    if not url.startswith(("https://", "http://")):
+        return False
+    host = url.split("://", 1)[1].split("/", 1)[0].split(":", 1)[0].lower()
+    return host == SHOP_DOMAIN or host.endswith("." + SHOP_DOMAIN)
+
+
+def shop_payload(text, budget_line, image_url=None):
+    model = os.getenv("OPENAI_MODEL") or DEFAULT_MODEL
+    content = [{"type": "input_text", "text": text}]
+    if image_url:
+        content.append({"type": "input_image", "image_url": image_url})
+    payload = {
+        "model": model,
+        "instructions": SHOP_PROMPT.format(budget=budget_line),
+        "input": [{"role": "user", "content": content}],
+        "tools": [{"type": "web_search", "search_context_size": "low",
+                   "filters": {"allowed_domains": [SHOP_DOMAIN]}}],
+        "include": ["web_search_call.action.sources"],
+        "text": {"format": {"type": "json_schema", "name": "picks", "strict": True, "schema": SHOP_SCHEMA}},
+    }
+    if model.startswith("gpt-5"):
+        payload["reasoning"] = {"effort": "low"}  # 추론 모델만 받는 값
+    return payload
+
+
+def parse_picks(answer):
+    # 답에서 (문장, 상품 카드)를 꺼낸다. 검색에서 실제로 본 무신사 페이지만 남긴다 (지어낸 상품 거르기)
+    seen, text = set(), ""
+    for out in answer.get("output") or []:
+        if out.get("type") == "web_search_call":
+            for source in (out.get("action") or {}).get("sources") or []:
+                if source.get("url"):
+                    seen.add(page_key(source["url"]))
+        elif out.get("type") == "message":
+            for part in out.get("content") or []:
+                if part.get("type") == "output_text":
+                    text += part.get("text") or ""
+                    for note in part.get("annotations") or []:
+                        if note.get("url"):
+                            seen.add(page_key(note["url"]))
+    data = json.loads(text)
+    reply = " ".join(str(data.get("reply") or "").split())[:300]
+    picks = []
+    for it in data.get("items") or []:
+        url = str(it.get("url") or "")
+        if not is_shop_url(url) or (seen and page_key(url) not in seen):
+            continue
+        item = clean_item({"name": it.get("name"), "price": it.get("price")})
+        if item["name"] is None:
+            continue
+        picks.append({"name": item["name"], "price": item["price"], "url": url[:500],
+                      "reason": " ".join(str(it.get("reason") or "").split())[:120]})
+        if len(picks) == MAX_PICKS:
+            break
+    return reply, picks
+
+
+def recommend(text, budget_line, image=None, call=None):
+    # (답 문장, 상품 카드 목록, None) 또는 (None, [], ERRORS의 키). call은 테스트에서 가짜로 바꿔 끼운다
+    image_url = None
+    if image is not None:
+        mime = image_type(image)
+        if mime is None:
+            return None, [], "type"
+        if len(image) > MAX_BYTES:
+            return None, [], "size"
+        image_url = "data:" + mime + ";base64," + base64.b64encode(image).decode("ascii")
+    try:
+        reply, picks = parse_picks((call or post_responses)(shop_payload(text, budget_line, image_url)))
+    except urllib.error.HTTPError as e:
+        print("쇼핑 추천 실패:", e.code, e.read()[:300])
+        return None, [], "search"
+    except (urllib.error.URLError, TimeoutError, KeyError, IndexError, TypeError, AttributeError, ValueError) as e:
+        print("쇼핑 추천 실패:", repr(e))
+        return None, [], "search"
+    return reply, picks, None

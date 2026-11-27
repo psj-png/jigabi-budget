@@ -422,3 +422,27 @@ details.more[open] > summary { margin-bottom: 8px; }
 .capture { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
 .capture .small { margin: 6px 0 0; }
 .field input.ai-filled { border-color: #9DB8F2; background: #F3F7FF; }
+
+/* 지갑이 채팅 (R21) */
+.fab { position: fixed; right: max(16px, calc(50% - 194px)); bottom: 80px; z-index: 14; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--blue); color: #FFFFFF; box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35); }
+.fab svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.row-link { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding-left: 8px; font-size: 12px; font-weight: 700; color: var(--blue-dark); }
+.chat { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+.bubble-row { display: flex; align-items: flex-end; gap: 8px; }
+.bubble-row svg { flex: none; }
+.bubble-row.me { justify-content: flex-end; }
+.say { max-width: 78%; padding: 10px 12px; font-size: 15px; line-height: 1.5; }
+.bubble-row.bot .say { background: #FFFFFF; border-radius: 4px 16px 16px 16px; }
+.bubble-row.me .say { background: var(--blue); color: #FFFFFF; border-radius: 16px 4px 16px 16px; }
+.picks { list-style: none; margin: 0 0 0 48px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pick { margin: 0; padding: 12px 14px; }
+.pick-name { display: block; font-weight: 700; color: var(--text); text-underline-offset: 3px; }
+.pick-price { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.pick .small { margin: 2px 0 0; }
+.pick form { margin-top: 8px; }
+.starters { flex-wrap: wrap; margin: 8px 0 0; }
+.starters form { margin: 0; }
+.starters .chip { min-height: 40px; border: 1px solid var(--border); background: #FFFFFF; font: inherit; font-size: 14px; cursor: pointer; }
+.chat-form { position: sticky; bottom: 0; margin-top: 12px; padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--bg); }
+.chat-form input[type="text"] { display: block; width: 100%; box-sizing: border-box; min-height: 48px; margin: 4px 0 10px; padding: 0 12px; border: 1px solid var(--border); border-radius: 12px; background: #FFFFFF; font: inherit; font-size: 16px; }
+.chat-form .small { margin: 6px 0 0; }

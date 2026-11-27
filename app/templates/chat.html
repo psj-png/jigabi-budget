@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "_wallet.html" import wallet %}
+{% set no_nav = true %}
+{% block nav %}{% endblock %}
+
+{% block content %}
+{% set q = ("?today=" ~ today_q) if today_q else "" %}
+{% set c = chat %}
+<div class="top">
+  <a class="back" href="/{{ q }}" aria-label="뒤로"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+  <h1>지갑이에게 물어보기</h1>
+</div>
+<p class="top-sub">무신사에서 내 지갑에 맞는 걸 찾아 줘요.</p>
+
+{% if c.budget %}
+<div class="notice">지금 든든을 지키려면 <b>{{ "{:,}".format(c.budget.keep_solid) }}원</b>까지예요. {{ "{:,}".format(c.budget.no_touch) }}원을 넘으면 최소 생활비를 건드려요.</div>
+{% endif %}
+
+<div class="chat">
+  {% if not c.messages %}
+  <div class="bubble-row bot">
+    {{ wallet(c.stage or "든든", 40) }}
+    <div class="say">찾고 싶은 옷이나 물건을 말해 주세요. 사고 싶은 상품 캡처를 올리면 비슷한 걸 찾아 줄게요.</div>
+  </div>
+  {% endif %}
+  {% for m in c.messages %}
+  <div class="bubble-row {{ 'me' if m.role == 'user' else 'bot' }}"{% if loop.last %} id="last"{% endif %}>
+    {% if m.role != 'user' %}{{ wallet(c.stage or "든든", 40) }}{% endif %}
+    <div class="say">{{ m.content }}</div>
+  </div>
+  {% if m["items"] %}
+  <ul class="picks">
+    {% for it in m["items"] %}
+    <li class="card pick">
+      <a class="pick-name" href="{{ it.url }}" target="_blank" rel="noopener">{{ it.name }}</a>
+      <div class="pick-price">
+        {% if it.price %}<b>{{ "{:,}".format(it.price) }}원</b>{% if it.chip %}<span class="jua-chip st-{{ it.chip }}">사면 {{ it.chip }}</span>{% endif %}
+        {% else %}<span class="small">가격은 무신사에서 확인해 주세요</span>{% endif %}
+      </div>
+      {% if it.reason %}<p class="small">{{ it.reason }}</p>{% endif %}
+      {% if it.price %}
+      <form method="post" action="/chat/add">
+        {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+        <input type="hidden" name="name" value="{{ it.name }}">
+        <input type="hidden" name="price" value="{{ it.price }}">
+        <input type="hidden" name="url" value="{{ it.url }}">
+        <button type="submit" class="btn-small">장바구니에 담기</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="center-note">무신사 검색 결과에서 골랐어요. 가격은 무신사에서 다시 확인해 주세요.</p>
+  {% endif %}
+  {% endfor %}
+</div>
+
+{% if c.used >= c.limit %}
+<div class="notice">오늘은 {{ c.limit }}번 다 물어봤어요. 내일 다시 찾아 줄게요.</div>
+{% else %}
+{% if not c.messages %}
+<div class="chips starters">
+  {% for s in c.starters %}
+  <form method="post" action="/chat">{% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}<button type="submit" class="chip" name="text" value="{{ s }}">{{ s }}</button></form>
+  {% endfor %}
+</div>
+{% endif %}
+{# 웹 검색은 10초쯤 걸려서, 보내는 동안 버튼을 막고 기다리라고 알려 준다 (JS는 이 한 줄만) #}
+<form method="post" action="/chat" enctype="multipart/form-data" class="chat-form" onsubmit="this.querySelector('.btn').disabled = true; this.querySelector('.wait').hidden = false">
+  {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+  <label class="label" for="text">무엇을 찾을까요?</label>
+  <input id="text" type="text" name="text" maxlength="300" placeholder="예: 이런 코트인데 15만 원 아래로">
+  <label class="field">사고 싶은 상품 캡처 (선택)<input type="file" name="shot" accept="image/png,image/jpeg,image/webp"></label>
+  <button type="submit" class="btn">보내기</button>
+  <p class="wait small" hidden>지갑이가 무신사를 찾고 있어요. 10초쯤 걸려요.</p>
+  <p class="small">오늘 {{ c.used }}/{{ c.limit }}번 물어봤어요.</p>
+</form>
+{% endif %}
+{% endblock %}
