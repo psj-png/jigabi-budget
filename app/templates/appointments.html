@@ -10,7 +10,83 @@
   <h1>약속</h1>
 </div>
 
-{# b) 잡힌 약속 #}
+{% set dq = "&today=" ~ today_q if today_q else "" %}
+{# a) 달력: 한 달을 한 번에 보고 날을 누르면 아래에 그날이 나온다 #}
+<section class="card" id="cal">
+  <div class="cal-head">
+    <b>{{ month.year }}년 {{ month.month }}월</b>
+    <span class="cal-arrows">
+      {% if prev_month %}<a href="/appointments?month={{ prev_month }}&amp;day={{ day }}{{ dq }}#cal" aria-label="지난 달"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+      {% else %}<span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>{% endif %}
+      <a href="/appointments?month={{ next_month }}&amp;day={{ day }}{{ dq }}#cal" aria-label="다음 달"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></a>
+    </span>
+  </div>
+  <div class="cal-grid">
+    {% for w in ["일", "월", "화", "수", "목", "금", "토"] %}<span class="cal-wd">{{ w }}</span>{% endfor %}
+    {% for week in weeks %}{% for d in week %}
+    {% set in_period = period_end and now <= d <= period_end %}
+    {% set cls = (" in" if in_period else "") ~ (" first" if in_period and (d == now or loop.first) else "") ~ (" last" if in_period and (d == period_end or loop.last) else "") %}
+    {% if d.month != month.month %}<span class="cal-day"></span>
+    {% elif d < now %}<span class="cal-day past"><span class="n">{{ d.day }}</span></span>
+    {% else %}<a class="cal-day{{ cls }}{% if d == now %} today{% endif %}{% if d == day %} on{% endif %}" href="/appointments?day={{ d }}{{ dq }}#new"{% if d == day %} aria-current="date"{% endif %}><span class="n">{{ d.day }}</span>{% if d in appt_days %}<i class="cal-dot" aria-label="약속 있음"></i>{% endif %}</a>{% endif %}
+    {% endfor %}{% endfor %}
+  </div>
+  <p class="cal-key">{% if period_end %}<span><i class="k-in"></i>이번 기간 남은 날 (~{{ period_end.month }}/{{ period_end.day }})</span>{% endif %}<span><i class="k-dot"></i>약속 있는 날</span></p>
+</section>
+
+{# b) 고른 날: 그날 가는 곳·약속, 바로 아래에서 약속 넣기 #}
+<section class="card" id="new">
+  <div class="day-head"><b>{{ day.month }}월 {{ day.day }}일 ({{ days[day.weekday()] }}){% if day == now %} · 오늘{% endif %}</b></div>
+  <p class="small">{% if places %}{{ places|join(", ") }} 가는 날{% else %}가는 곳 없는 날{% endif %}{% if day_appts %} · 약속 {{ day_appts|length }}개{% endif %}</p>
+  {% for a in day_appts %}
+  <div class="row"><span class="row-main"><b>{{ a.title }}</b></span><span class="row-end"><b>{{ "{:,}".format(a.amount + a.transport_fare) }}원</b></span></div>
+  {% endfor %}
+  <form method="post" action="/appointments">
+    <input type="hidden" name="day" value="{{ day }}">
+    <input type="hidden" name="preview" value="1">
+    {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+    <label class="field">이날 무슨 약속이 있나요<input type="text" name="title" maxlength="40" value="{{ title }}" placeholder="예: 동아리 회식" required></label>
+
+    {# d) 금액 빠른 선택: 링크만 (JS 없음) #}
+    <div class="label">금액</div>
+    <div class="chips quick">
+      {% for amt in [10000, 30000, 50000] %}
+      <a class="chip pick-link{% if amount == amt %} pick-on{% endif %}" href="/appointments?day={{ day }}&amp;amount={{ amt }}{{ dq }}#new">{{ amt // 10000 }}만</a>
+      {% endfor %}
+    </div>
+    <div class="money-input"><input type="number" name="amount" min="0" value="{% if amount is not none %}{{ amount }}{% endif %}" required aria-label="금액"><span>원</span></div>
+
+    {# 교통비: 토글 + 왜 켜졌는지/꺼졌는지 한 줄 (R9) #}
+    <label class="toggle-row">
+      <span class="t-text"><b>교통비 더하기</b>
+        <small>{% if places %}이날은 {{ places|join(", ") }} 가는 날이라 교통비가 이미 들어 있어요{% else %}이날은 가는 곳이 없어서 교통비를 따로 챙겨요{% endif %}</small></span>
+      <span class="switch"><input type="checkbox" name="transport" aria-label="교통비 더하기" {% if transport_on %}checked{% endif %}><span></span></span>
+    </label>
+    <div class="money-input"><input type="number" name="transport_fare" min="0" value="{{ fare_amount if transport_on else max_fare }}" aria-label="교통비"><span>원</span></div>
+
+    {# e) 넣으면 하루 여유가 어떻게 되는지 #}
+    {% if look %}
+    <div class="look">
+      {% if look.counted %}
+      <p>넣으면 하루 여유 <b>{{ "{:,}".format(look.now_daily) }}원 → {{ "{:,}".format(look.daily)|replace("-", "−") }}원</b></p>
+      {% else %}
+      <p>다음 기간 약속이라 이번 하루 여유는 그대로예요 <b>{{ "{:,}".format(look.now_daily) }}원</b></p>
+      {% endif %}
+      <div class="look-row">
+        {{ wallet(look.now_stage, 44) }}<span class="arrow">→</span>{{ wallet(look.stage, 44) }}
+        <span>지갑이 <span class="jua st-{{ look.now_stage }}">{{ look.now_stage }}</span> → <span class="jua st-{{ look.stage }}">{{ look.stage }}</span></span>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="btn-pair">
+      <button type="submit" class="btn btn-sub" formmethod="get" formaction="/appointments">미리보기</button>
+      <button type="submit" class="btn">약속 넣기</button>
+    </div>
+  </form>
+</section>
+
+{# c) 앞으로 잡힌 약속 전부 #}
 <section class="card">
   <div class="card-head"><b>잡힌 약속</b></div>
   {% if appts %}
@@ -29,65 +105,8 @@
     {% endfor %}
   </ul>
   {% else %}
-  <div class="empty">
-    <p>다가오는 약속이 없어요.</p>
-    <a class="btn btn-sub" href="#new">약속 넣기</a>
-  </div>
+  <p class="small">다가오는 약속이 없어요. 달력에서 날을 눌러 넣을 수 있어요.</p>
   {% endif %}
 </section>
 
-{# c) 새 약속 #}
-<section class="card" id="new">
-  <div class="card-head"><b>새 약속</b></div>
-  {% if day is none %}
-  <!-- 1단계: 날짜를 먼저 고른다 -->
-  <form method="get" action="/appointments">
-    {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-    <label class="field">날짜<input type="date" name="day" min="{{ now }}" required></label>
-    <button type="submit" class="btn">다음</button>
-  </form>
-  {% else %}
-  <!-- 2단계: 그날 가는 곳이 없으면 교통비를 켠 채로 채워 준다 -->
-  <p class="label">{{ day.month }}월 {{ day.day }}일 ({{ days[day.weekday()] }})
-    · <a href="/appointments{{ q }}">날짜 다시 고르기</a></p>
-  <form method="post" action="/appointments">
-    <input type="hidden" name="day" value="{{ day }}">
-    <input type="hidden" name="preview" value="1">
-    {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-    <label class="field">무슨 약속인가요<input type="text" name="title" maxlength="40" value="{{ title }}" required></label>
-
-    {# d) 금액 빠른 선택: 링크만 (JS 없음) #}
-    <div class="label">금액</div>
-    <div class="chips quick">
-      {% for amt in [10000, 30000, 50000] %}
-      <a class="chip pick-link" href="/appointments?day={{ day }}&amp;amount={{ amt }}{% if today_q %}&amp;today={{ today_q }}{% endif %}">{{ amt // 10000 }}만</a>
-      {% endfor %}
-    </div>
-    <div class="money-input"><input type="number" name="amount" min="0" value="{% if amount is not none %}{{ amount }}{% endif %}" required aria-label="금액"><span>원</span></div>
-
-    <label class="check-line"><input type="checkbox" name="transport" {% if transport_on %}checked{% endif %}> 교통비</label>
-    <div class="money-input"><input type="number" name="transport_fare" min="0" value="{{ fare_amount if transport_on else max_fare }}" aria-label="교통비"><span>원</span></div>
-
-    {# e) 넣으면 하루 여유가 어떻게 되는지 #}
-    {% if look %}
-    <div class="look">
-      {% if look.counted %}
-      <p>넣으면 하루 여유 <b>{{ "{:,}".format(look.now_daily) }}원 → {{ "{:,}".format(look.daily)|replace("-", "−") }}원</b></p>
-      {% else %}
-      <p>다음 기간 약속이라 이번 하루 여유는 그대로예요 <b>{{ "{:,}".format(look.now_daily) }}원</b></p>
-      {% endif %}
-      <div class="look-row">
-        {{ wallet(look.now_stage, 44) }}<span class="arrow">→</span>{{ wallet(look.stage, 44) }}
-        <span>지갑이 <span class="jua st-{{ look.now_stage }}">{{ look.now_stage }}</span> → <span class="jua st-{{ look.stage }}">{{ look.stage }}</span></span>
-      </div>
-    </div>
-    {% endif %}
-
-    <div class="stack">
-      <button type="submit" class="btn">약속 추가</button>
-      <button type="submit" class="btn btn-sub" formmethod="get" formaction="/appointments">미리보기</button>
-    </div>
-  </form>
-  {% endif %}
-</section>
 {% endblock %}

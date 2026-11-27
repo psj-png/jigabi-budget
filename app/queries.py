@@ -5,7 +5,7 @@
 def get_routines(conn, user_id):
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT routine_id, round_trip_fare, meals_out, meal_price, start_date, end_date "
+            "SELECT routine_id, name, round_trip_fare, meals_out, meal_price, start_date, end_date "
             "FROM routines WHERE user_id = %s",
             (user_id,),
         )

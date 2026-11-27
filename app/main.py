@@ -1,3 +1,4 @@
+import calendar
 import json
 from datetime import date, datetime, timedelta
 from urllib.parse import urlencode, urlsplit
@@ -390,13 +391,14 @@ def balance_spent(request: Request, day: str = Form(), spent: int = Form(ge=0),
 @app.get("/appointments")
 def appointments_get(request: Request, today: str = None, day: str = None, amount: str = None,
                      title: str = "", transport: str = None, transport_fare: str = None,
-                     preview: str = None):
+                     preview: str = None, month: str = None):
     user_id = current_user(request)
     if user_id is None:
         return to_start()
     now = pick_now(request, today)
-    target = parse_date(day, None)
-    if target is not None and target < now:
+    # 날짜를 안 골랐으면 오늘로 두고 바로 적게 한다 (위 달력에서 날을 누르면 바뀐다)
+    target = parse_date(day, None) or now
+    if target < now:
         raise HTTPException(status_code=400, detail="오늘보다 앞선 날짜는 안 돼요")
     # 미리보기 칸이 빈칸이거나 숫자가 아니면 없는 것으로 본다
     amount = int(amount) if amount and amount.isdigit() else None
@@ -407,12 +409,22 @@ def appointments_get(request: Request, today: str = None, day: str = None, amoun
         appts = [a for a in queries.get_appointments(conn, user_id) if a["appt_date"] >= now]
         # 2단계: 날짜를 고르면 그날 교통비 기본값(R9)을 채워 보여준다
         # 체크는 그날 가는 곳이 없을 때만 켜고, 금액 칸은 항상 가장 큰 왕복 교통비
-        fare = None
-        max_fare = 0
-        if target is not None:
-            routines = queries.get_routines(conn, user_id)
-            fare = calc.transport_default(target, routines)
-            max_fare = calc.max_fare(routines)
+        routines = queries.get_routines(conn, user_id)
+        fare = calc.transport_default(target, routines)
+        max_fare = calc.max_fare(routines)
+        # 그날 가는 곳 이름 (교통비 토글 아래 한 줄 설명)
+        places = [r["name"] for r in routines if calc.goes_on(target, r)]
+        # 달력: 고른 날의 달을 일요일부터. 화살표로 다른 달 (지난 달로는 못 간다)
+        first_of = parse_date(month + "-01", None) if month else target.replace(day=1)
+        if first_of < now.replace(day=1):
+            first_of = now.replace(day=1)
+        weeks = calendar.Calendar(firstweekday=6).monthdatescalendar(first_of.year, first_of.month)
+        prev_month = (first_of - timedelta(days=1)).strftime("%Y-%m") if first_of > now.replace(day=1) else None
+        next_month = (first_of + timedelta(days=31)).strftime("%Y-%m")
+        appt_days = {a["appt_date"] for a in appts}
+        day_appts = [a for a in appts if a["appt_date"] == target]
+        h = make_home(conn, user_id, now)
+        period_end = h["end"] if h["ready"] else None
 
         # 금액이 정해졌으면 넣은 뒤 하루 여유를 미리 본다 (R11과 같은 calc.preview)
         # 교통비 체크는 [미리보기]로 온 경우 그 상태, 금액 칩으로 온 경우 기본값
@@ -420,7 +432,6 @@ def appointments_get(request: Request, today: str = None, day: str = None, amoun
         fare_amount = (transport_fare if transport_fare is not None else max_fare) if transport_on else 0
         look = None
         if target is not None and amount is not None and amount >= 0:
-            h = make_home(conn, user_id, now)
             if h["ready"] and h["daily"] is not None:
                 comfort = queries.get_user(conn, user_id)["comfort_daily"]
                 first = now + timedelta(days=1) if h["logged"] else now
@@ -438,6 +449,8 @@ def appointments_get(request: Request, today: str = None, day: str = None, amoun
         "appts": appts, "day": target, "fare": fare, "max_fare": max_fare,
         "today_q": today, "now": now, "amount": amount, "title": title,
         "transport_on": transport_on, "fare_amount": fare_amount, "look": look,
+        "places": places, "weeks": weeks, "month": first_of, "prev_month": prev_month,
+        "next_month": next_month, "appt_days": appt_days, "day_appts": day_appts, "period_end": period_end,
     })
 
 
