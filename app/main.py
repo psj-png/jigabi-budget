@@ -208,6 +208,9 @@ async def setup_step(request: Request):
     setup.take_step(d, form, step, editing)
 
     if go == "back":
+        if step == 4 and editing:
+            # 고치는 화면의 <: 고친 내용을 담은 채 4/5 요약으로
+            return render_setup(request, d, 4, today)
         return render_setup(request, d, max(step - 1, 1), today)
     if go.startswith("to:") and go[3:].isdigit():
         # 5/5 확인 화면의 [고치기]

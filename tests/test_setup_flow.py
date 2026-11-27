@@ -76,7 +76,9 @@ def test_고치는_화면을_거쳐도_가는_곳이_남는다():
     client = TestClient(app)
     page = to_step4(client)
     page = press(client, page, "edit")    # 학교 카드를 누른다
-    page = press(client, page, "back")    # 아무것도 안 바꾸고 <  (지금은 3/5로 간다)
+    page = press(client, page, "back")    # 아무것도 안 바꾸고 < → 4/5 요약
+    assert "이대로 할게요" in text_of(page)
+    page = press(client, page, "back")    # 요약의 < → 3/5
     page = press(client, page, "next")    # 3/5 다음 → 4/5 요약
     assert [r["name"] for r in draft_of(page)["routines"]] == ["학교"]
     page = press(client, page, "next")    # 이대로 할게요 → 5/5
@@ -98,3 +100,14 @@ def test_가는_곳이_없어요는_한_번_묻고_네를_눌러야_비운다():
     done = press(client, asked, "yes_no_routine")                         # 네
     assert draft_of(done)["routines"] == []
     assert "이렇게 계산할게요" in text_of(done)
+
+
+def test_고치는_화면의_뒤로는_고친_내용을_담고_요약으로():
+    client = TestClient(app)
+    page = to_step4(client)
+    page = press(client, page, "edit")
+    page = press(client, page, "back", r_name="수업", r_fare="2500")
+    text = text_of(page)
+    assert "이대로 할게요" in text and "수업" in text and "2,500원" in text
+    routines = draft_of(page)["routines"]
+    assert [(r["name"], r["fare"]) for r in routines] == [("수업", "2500")]
