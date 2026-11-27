@@ -95,16 +95,20 @@
   {% endfor %}
 </div>
 {% endif %}
-{# 답이 오래 걸릴 수 있어서, 보내는 동안 버튼을 막고 기다리라고 알려 준다 (JS는 이 한 줄만) #}
-<form method="post" action="/chat" enctype="multipart/form-data" class="chat-form" onsubmit="this.querySelector('.btn').disabled = true; this.querySelector('.wait').hidden = false">
+{# 화면 아래에 붙는 입력줄. 답이 오래 걸릴 수 있어서 보내는 동안 버튼을 막고 기다리라고 알려 준다 (JS는 form마다 한 줄) #}
+<div class="chat-dock">
+<form method="post" action="/chat" enctype="multipart/form-data" class="chat-form" onsubmit="this.querySelector('.send').disabled = true; this.querySelector('.wait').hidden = false">
   <input type="hidden" name="mode" value="{{ mode }}">
   {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-  <label class="label" for="text">{% if mode == "plan" %}무엇이 궁금해요?{% else %}무엇을 찾을까요?{% endif %}</label>
-  <input id="text" type="text" name="text" maxlength="300" placeholder="{% if mode == 'plan' %}예: 알바비 날까지 어떻게 써야 해?{% else %}예: 이런 코트인데 15만 원 아래로{% endif %}">
-  {% if mode != "plan" %}<label class="field">사고 싶은 상품 캡처 (선택)<input type="file" name="shot" accept="image/png,image/jpeg,image/webp"></label>{% endif %}
-  <button type="submit" class="btn">보내기</button>
-  <p class="wait small" hidden>{% if mode == "plan" %}지갑이가 계획을 짜고 있어요.{% else %}지갑이가 무신사를 찾고 있어요. 10초쯤 걸려요.{% endif %}</p>
-  <p class="small">오늘 {{ c.used }}/{{ c.limit }}번 물어봤어요.</p>
+  {% if mode != "plan" %}
+  {# 사진을 고르면 아이콘에 점이 보이게 form에 클래스만 바꾼다 #}
+  <label class="shot-btn" aria-label="상품 캡처 올리기 (선택)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.5"/><path d="M4 17l5-5 4 4 3-3 4 4"/></svg><input type="file" name="shot" accept="image/png,image/jpeg,image/webp" onchange="this.form.classList.toggle('has-shot', this.files.length > 0)"></label>
+  {% endif %}
+  <input id="text" type="text" name="text" maxlength="300" aria-label="{% if mode == 'plan' %}무엇이 궁금해요?{% else %}무엇을 찾을까요?{% endif %}" placeholder="{% if mode == 'plan' %}예: 알바비 날까지 어떻게 써야 해?{% else %}예: 이런 코트인데 15만 원 아래로{% endif %}">
+  <button type="submit" class="send" aria-label="보내기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+  <p class="wait small" hidden>{% if mode == "plan" %}지갑이가 계획을 짜고 있어요.{% else %}지갑이가 무신사를 찾고 있어요. 30초쯤 걸릴 수 있어요.{% endif %}</p>
+  <p class="used small">오늘 {{ c.used }}/{{ c.limit }}번 물어봤어요</p>
 </form>
+</div>
 {% endif %}
 {% endblock %}

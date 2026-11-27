@@ -460,9 +460,19 @@ body:has(input:focus, textarea:focus) .fab { display: none; }
 .starters { flex-wrap: wrap; margin: 8px 0 0; }
 .starters form { margin: 0; }
 .starters .chip { min-height: 44px; border: 1px solid var(--border); background: #FFFFFF; font: inherit; font-size: 14px; cursor: pointer; }
-.chat-form { position: sticky; bottom: 0; margin-top: 12px; padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--bg); }
-.chat-form input[type="text"] { display: block; width: 100%; box-sizing: border-box; min-height: 48px; margin: 4px 0 10px; padding: 0 12px; border: 1px solid var(--border); border-radius: 12px; background: #FFFFFF; font: inherit; font-size: 16px; }
-.chat-form .small { margin: 6px 0 0; }
+/* 화면 아래에 붙는 입력줄 (메신저처럼). 대화 맨 아래가 가려지지 않게 본문 아래에 여백을 둔다 */
+.app:has(.chat-dock) { padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
+.chat-dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 14; max-width: 420px; margin: 0 auto; padding: 8px 16px calc(8px + env(safe-area-inset-bottom)); background: var(--bg); border-top: 1px solid var(--line); }
+.chat-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.chat-form input[type="text"] { flex: 1; min-width: 0; box-sizing: border-box; min-height: 44px; padding: 0 14px; border: 1px solid var(--border); border-radius: 22px; background: #FFFFFF; color: var(--text); font: inherit; font-size: 16px; }
+.send { flex: none; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--blue); color: #FFFFFF; cursor: pointer; }
+.send:disabled { opacity: 0.5; }
+.send svg, .shot-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.shot-btn { position: relative; flex: none; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: var(--muted); cursor: pointer; }
+.shot-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.chat-form.has-shot .shot-btn { color: var(--blue-dark); }
+.chat-form.has-shot .shot-btn::after { content: ""; position: absolute; top: 8px; right: 8px; width: 10px; height: 10px; border-radius: 50%; background: var(--blue); border: 2px solid var(--bg); }
+.chat-form .small { flex-basis: 100%; margin: 0; }
 
 /* 계획 도우미 (R22) */
 .mode-tabs { margin: 0 0 12px; }
