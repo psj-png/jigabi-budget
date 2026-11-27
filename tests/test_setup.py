@@ -156,7 +156,7 @@ def test_첫_설정_줄_더하고_빼기():
     assert d["main"] == "0" and d["incomes"][0]["name"] == "용돈"
     assert setup.apply_op(d, "del_income:0")  # 고른 줄을 빼면 다시 앱이 정한다
     assert d["main"] == "" and len(d["incomes"]) == 1
-    assert setup.apply_op(d, "no_fixed") and d["fixed"] == []
+    assert setup.apply_op(d, "del_fixed:0") and d["fixed"] == []
     assert setup.apply_op(d, "add_routine") and [r["name"] for r in d["routines"]] == ["학교", ""]
     assert setup.apply_op(d, "no_routine") and d["routines"] == []
     assert not setup.apply_op(d, "모르는_버튼")

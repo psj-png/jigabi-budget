@@ -284,8 +284,6 @@ def apply_op(d, op):
         d["fixed"].append({"name": "", "day": "", "amount": ""})
     elif kind == "del_fixed" and 0 <= index < len(d["fixed"]):
         del d["fixed"][index]
-    elif kind == "no_fixed":
-        d["fixed"] = []
     elif kind == "add_routine" and len(d["routines"]) < ROUTINE_ROWS:
         d["routines"].append({"name": "", "wds": [], "meals": "0", "price": "0", "fare": "0",
                               "start": "", "end": ""})
