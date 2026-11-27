@@ -154,21 +154,23 @@
   {% endif %}
 
   {% else %}
-  {# 5/5 확인: 이렇게 계산할게요. 줄마다 [고치기] #}
+  {# 5/5 확인: 이렇게 계산할게요. 줄을 누르면 그 단계로 가서 고친다 #}
   <h1 class="split-title">이렇게 계산할게요</h1>
-  <p class="top-sub" style="margin-top: 0">이번 기간 {{ look.start.month }}/{{ look.start.day }}~{{ look.end.month }}/{{ look.end.day }} · {{ look.days_left }}일</p>
-  <p class="main-line"><span>{{ look.main.name }}{{ look.main_iga }} 들어오는 {{ look.main.day_of_month }}일마다 새로 시작해요</span>{% if look.choices|length > 1 %}<button type="submit" class="btn-small" name="go" value="pick_main" formaction="/setup/step" formnovalidate>바꾸기</button>{% endif %}</p>
   {% if examples %}
-  <div class="notice">아직 예시 값이에요: {{ examples|join(", ") }}. 내 금액과 다르면 고쳐 주세요.</div>
+  <div class="notice">아직 예시 값이 있어요: {{ examples|join(", ") }}</div>
   {% endif %}
   <section class="card">
     <ul class="confirm">
-      <li><span>지금 잔액</span><b>{{ "{:,}".format(look.balance) }}원</b><button type="submit" class="btn-small" name="go" value="to:1" formaction="/setup/step" formnovalidate>고치기</button></li>
-      <li><span>기간 안에 들어올 돈</span><b>{{ "{:,}".format(look.income) }}원</b><button type="submit" class="btn-small" name="go" value="to:2" formaction="/setup/step" formnovalidate>고치기</button></li>
-      <li><span>고정비</span><b>{{ "{:,}".format(look.fixed) }}원</b><button type="submit" class="btn-small" name="go" value="to:3" formaction="/setup/step" formnovalidate>고치기</button></li>
-      <li><span>최소 생활비<small>밥값·교통비, 앱이 줄이지 않아요</small></span><b>{{ "{:,}".format(look.min_living) }}원</b><button type="submit" class="btn-small" name="go" value="to:4" formaction="/setup/step" formnovalidate>고치기</button></li>
+      <li>{% if look.choices|length > 1 %}<button type="submit" name="go" value="pick_main" formaction="/setup/step" formnovalidate>{% else %}<div>{% endif %}
+        <span>기간<small>{{ look.main.name }} 날({{ look.main.day_of_month }}일)마다 새로 시작</small></span><b>{{ look.start.month }}/{{ look.start.day }}~{{ look.end.month }}/{{ look.end.day }} · {{ look.days_left }}일</b>
+      {% if look.choices|length > 1 %}</button>{% else %}</div>{% endif %}</li>
+      <li><button type="submit" name="go" value="to:1" formaction="/setup/step" formnovalidate><span>지금 잔액</span><b>{{ "{:,}".format(look.balance) }}원</b></button></li>
+      <li><button type="submit" name="go" value="to:2" formaction="/setup/step" formnovalidate><span>기간 안에 들어올 돈</span><b>{{ "{:,}".format(look.income) }}원</b></button></li>
+      <li><button type="submit" name="go" value="to:3" formaction="/setup/step" formnovalidate><span>고정비</span><b>{{ "{:,}".format(look.fixed) }}원</b></button></li>
+      <li><button type="submit" name="go" value="to:4" formaction="/setup/step" formnovalidate><span>최소 생활비<small>밥값·교통비</small></span><b>{{ "{:,}".format(look.min_living) }}원</b></button></li>
     </ul>
   </section>
+  <p class="center-note">줄을 누르면 고칠 수 있어요</p>
   <section class="card wallet-card">
     {{ wallet(look.stage, 72) }}
     <div class="wallet-text">

@@ -318,12 +318,6 @@ def example_left(d):
     return names + [r.get("name") for r in d["fixed"] if r in EXAMPLE_FIXED]
 
 
-def iga(name):
-    # 이름 뒤에 붙일 '이/가' (받침이 없으면 가)
-    last = name[-1]
-    return "가" if "가" <= last <= "힣" and (ord(last) - 0xAC00) % 28 == 0 else "이"
-
-
 def period_text(day):
     # 기간이 이 날부터 시작한다는 날짜 범위: 25 -> '25일 ~ 다음 달 24일'
     return "1일 ~ 그달 말일" if day == 1 else f"{day}일 ~ 다음 달 {day - 1}일"
@@ -342,7 +336,7 @@ def preview(data, today):
     free = calc.free_money(data["balance"], income, fixed, 0, min_living)
     daily = calc.daily_margin(free, days_left)
     return {"start": start, "end": end, "days_left": days_left, "balance": data["balance"],
-            "main": main, "main_iga": iga(main["name"]), "choices": choices,
+            "main": main, "choices": choices,
             "income": income, "fixed": fixed, "min_living": min_living, "free": free,
             "daily": daily, "stage": calc.stage(daily, data["comfort_daily"]),
             "budget": calc.today_budget(today, data["routines"], [], daily)}
