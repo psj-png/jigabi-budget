@@ -22,7 +22,16 @@
   {% if not c.messages %}
   <div class="bubble-row bot">
     {{ wallet(c.stage or "든든", 40) }}
-    <div class="say">{% if mode == "plan" %}다음 돈 들어오는 날까지 어떻게 쓸지 같이 짜 볼까요? 도시락 날이나 모아 둘 돈을 골라 드리고, 적용하면 홈에도 바로 반영돼요.{% else %}찾고 싶은 옷이나 물건을 말해 주세요. 사고 싶은 상품 캡처를 올리면 비슷한 걸 찾아 줄게요.{% endif %}</div>
+    <div class="say">{% if mode == "plan" %}다음 돈 들어오는 날까지 어떻게 쓸지 같이 짜 볼까요? 도시락 날이나 모아 둘 돈을 골라 드리고, 적용하면 홈에도 바로 반영돼요.{% else %}찾고 싶은 옷이나 물건을 말해 주세요. 사고 싶은 상품 캡처를 올리면 비슷한 걸 찾아 줄게요.{% endif %}
+    {# 추천 질문: 누르면 그 문장이 바로 보내진다. 하루 한도를 다 쓴 날은 숨긴다 #}
+    {% if c.used < c.limit %}
+    <div class="starters">
+      {% for s in (plan_starters if mode == "plan" else c.starters) %}
+      <form method="post" action="/chat"><input type="hidden" name="mode" value="{{ mode }}">{% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}<button type="submit" class="starter-btn" name="text" value="{{ s }}">{{ s }}</button></form>
+      {% endfor %}
+    </div>
+    {% endif %}
+    </div>
   </div>
   {% endif %}
   {% for m in c.messages %}
@@ -81,12 +90,6 @@
 
 {% if c.used >= c.limit %}
 <div class="notice">오늘은 {{ c.limit }}번 다 물어봤어요. 내일 다시 도와줄게요.</div>
-{% elif not c.messages %}
-<div class="chips starters">
-  {% for s in (plan_starters if mode == "plan" else c.starters) %}
-  <form method="post" action="/chat"><input type="hidden" name="mode" value="{{ mode }}">{% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}<button type="submit" class="chip" name="text" value="{{ s }}">{{ s }}</button></form>
-  {% endfor %}
-</div>
 {% endif %}
 {# 화면 아래에 붙는 영역: 모드 칩(계획 짜기 R22 / 무신사에서 찾기 R21) + 입력줄. 답이 오래 걸릴 수 있어서 보내는 동안 버튼을 막고 기다리라고 알려 준다 (JS는 form마다 한 줄) #}
 <div class="chat-dock">

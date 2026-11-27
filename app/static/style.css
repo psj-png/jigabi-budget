@@ -457,9 +457,9 @@ body:has(input:focus, textarea:focus) .fab { display: none; }
 .pick-price { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
 .pick .small { margin: 2px 0 0; }
 .pick form { margin-top: 8px; }
-.starters { flex-wrap: wrap; margin: 8px 0 0; }
+.starters { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .starters form { margin: 0; }
-.starters .chip { min-height: 44px; border: 1px solid var(--border); background: #FFFFFF; font: inherit; font-size: 14px; cursor: pointer; }
+.starter-btn { display: block; width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 12px; background: #FFFFFF; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
 /* 화면 아래에 붙는 입력줄 (메신저처럼). 대화 맨 아래가 가려지지 않게 본문 아래에 여백을 둔다 */
 .app:has(.chat-dock) { padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
 .chat-dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 14; max-width: 420px; margin: 0 auto; padding: 8px 16px calc(8px + env(safe-area-inset-bottom)); background: var(--bg); border-top: 1px solid var(--line); }
