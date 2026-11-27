@@ -165,7 +165,7 @@ def set_login_cookie(response, public_id):
 
 
 # ---- 첫 설정 (흐름 2): 다섯 단계, 칸은 예시로 채워 두고 고치게 한다 ----
-def render_setup(request, d, step, today, error=None, editing=False, picking=False):
+def render_setup(request, d, step, today, error=None, editing=False, picking=False, ask_none=False):
     look = None
     if step == setup.LAST_STEP:
         try:
@@ -174,7 +174,7 @@ def render_setup(request, d, step, today, error=None, editing=False, picking=Fal
             return render_setup(request, d, 1, today, str(e))
     return templates.TemplateResponse(request, "setup_step.html", {
         "step": step, "d": d, "draft_json": json.dumps(d, ensure_ascii=False),
-        "today_q": today, "error": error, "editing": editing, "look": look, "picking": picking,
+        "today_q": today, "error": error, "editing": editing, "look": look, "picking": picking, "ask_none": ask_none,
         "examples": setup.example_left(d), "example_incomes": setup.EXAMPLE_INCOMES,
         "example_fixed": setup.EXAMPLE_FIXED, "weekday_text": setup.weekday_text,
         "has_alba": any(r.get("name") == "알바" for r in d["routines"]),
@@ -220,7 +220,12 @@ async def setup_step(request: Request):
         setup.apply_op(d, go)
         return render_setup(request, d, 4, today)
     if go == "no_routine":
-        setup.apply_op(d, go)
+        # 바로 지우지 않고 4/5에서 한 번 묻는다
+        return render_setup(request, d, 4, today, ask_none=True)
+    if go == "keep_routine":
+        return render_setup(request, d, 4, today)
+    if go == "yes_no_routine":
+        setup.apply_op(d, "no_routine")
         return render_setup(request, d, setup.LAST_STEP, today)
     if go != "next":
         # 줄 더하기·빼기는 같은 단계에 머문다

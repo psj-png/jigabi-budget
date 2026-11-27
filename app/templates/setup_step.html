@@ -144,6 +144,15 @@
     <span><b>{{ r.name }}</b><small>{{ weekday_text(r.wds) }} · {% if r.meals|int > 0 %}{{ r.meals }}끼 {{ "{:,}".format(r.price|int) }}원{% else %}밖에서 안 먹어요{% endif %} · 왕복 {{ "{:,}".format(r.fare|int) }}원</small></span>
   </button>
   {% endfor %}
+  {% if ask_none %}
+  {# '가는 곳이 없어요'를 누르면 바로 지우지 않고 한 번 묻는다 #}
+  <section class="card">
+    <p><b>{{ d.routines|map(attribute="name")|join(", ") }}</b>을(를) 빼고 계산할까요?</p>
+    <p class="small">밥값·교통비(최소 생활비)가 0원이 돼요</p>
+  </section>
+  <button type="submit" class="btn" name="go" value="yes_no_routine" formnovalidate>네, 가는 곳 없어요</button>
+  <button type="submit" class="btn btn-sub" name="go" value="keep_routine" formnovalidate>아니요</button>
+  {% else %}
   {% if d.routines|length < rows_max.routines %}<button type="submit" class="link-btn" name="go" value="add_routine" formnovalidate>+ 가는 곳 더하기</button>{% endif %}
   {% if d.routines %}
   <button type="submit" class="btn" name="go" value="next">이대로 할게요</button>
@@ -153,6 +162,7 @@
   {% endif %}
   {% if not has_alba and d.routines|length < rows_max.routines %}<button type="submit" class="link-btn" name="go" value="add_alba" formnovalidate>+ 알바도 있어요</button>{% endif %}
   {% if d.routines %}<button type="submit" class="link-btn" name="go" value="no_routine" formnovalidate>가는 곳이 없어요</button>{% endif %}
+  {% endif %}
   {% endif %}
 
   {% else %}
