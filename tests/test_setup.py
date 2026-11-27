@@ -189,3 +189,21 @@ def test_요일_글자():
     assert setup.weekday_text([5, 6]) == "토·일"
     assert setup.weekday_text([0, 2, 4]) == "월·수·금"
     assert setup.weekday_text([]) == "요일 없음"
+
+
+def test_확인_화면에서_기간_시작일_바꾸기():
+    d = setup.new_draft()
+    d["balance"] = "290000"
+    d["incomes"] = [{"name": "알바비", "day": "25", "amount": "400000"},
+                    {"name": "용돈", "day": "1", "amount": "250000"}]
+    today = date(2026, 11, 27)
+    look = setup.preview(setup.draft_data(d), today)  # 안 고르면 가장 큰 알바비
+    assert (look["main"]["name"], look["start"], look["end"], look["days_left"]) == (
+        "알바비", date(2026, 11, 27), date(2026, 12, 24), 28)
+    assert (setup.iga("알바비"), setup.iga("용돈")) == ("가", "이")
+    assert [(c["name"], c["range"], c["main"]) for c in look["choices"]] == [
+        ("알바비", "25일 ~ 다음 달 24일", True), ("용돈", "1일 ~ 그달 말일", False)]
+    d["main"] = str(look["choices"][1]["row"])  # [바꾸기]에서 용돈을 고르면
+    look = setup.preview(setup.draft_data(d), today)
+    assert (look["main"]["name"], look["start"], look["end"], look["days_left"]) == (
+        "용돈", date(2026, 11, 27), date(2026, 11, 30), 4)

@@ -8,12 +8,13 @@
 {% set q = ("?today=" ~ today_q) if today_q else "" %}
 {% set wd_labels = ["월", "화", "수", "목", "금", "토", "일"] %}
 {# 첫 설정 (흐름 2): 칸은 예시로 채워 두고, [다음]만 눌러도 끝까지 간다. 단계 사이 값은 draft 숨은 칸으로 넘긴다 #}
-<form method="post" action="{% if step == 5 %}/setup/done{% else %}/setup/step{% endif %}">
+<form method="post" action="{% if step == 5 and not picking %}/setup/done{% else %}/setup/step{% endif %}">
   {# 엔터를 누르면 [다음]: 뒤로 버튼보다 먼저 있어야 한다 #}
   <button type="submit" name="go" value="next" class="default-go" tabindex="-1" aria-hidden="true">다음</button>
   <input type="hidden" name="draft" value="{{ draft_json }}">
   <input type="hidden" name="step" value="{{ step }}">
   {% if editing %}<input type="hidden" name="editing" value="1">{% endif %}
+  {% if picking %}<input type="hidden" name="picking" value="1">{% endif %}
   {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
 
   <div class="top">
@@ -28,7 +29,18 @@
 
   {% if error %}<div class="warn">{{ error }}</div>{% endif %}
 
-  {% if step == 1 %}
+  {% if picking %}
+  {# 5/5-b 기간 시작일 바꾸기: 라디오로 고르고 [이걸로 할게요]. JS 없이 form으로 #}
+  <h1 class="split-title">한 달을 어디서 나눌까요?</h1>
+  <section class="card">
+    {% for c in look.choices %}
+    <label class="pick-row"><input type="radio" name="main" value="{{ c.row }}"{% if c.main %} checked{% endif %}><span>{{ c.name }} 날 기준 · {{ c.range }}</span></label>
+    {% endfor %}
+    <p class="small">보통 가장 큰 돈이 들어오는 날로 나눠요.</p>
+  </section>
+  <button type="submit" class="btn" name="go" value="next">이걸로 할게요</button>
+
+  {% elif step == 1 %}
   {# 1/5 지금 잔액: 모를 수 없는 값이라 이것만 비워 둔다 #}
   <h1 class="split-title">지금 통장에 얼마 있나요?</h1>
   <p class="top-sub" style="margin-top: 0">주로 쓰는 통장 앱에서 숫자만 보고 적으면 돼요.</p>
@@ -149,6 +161,7 @@
   {# 5/5 확인: 이렇게 계산할게요. 줄마다 [고치기] #}
   <h1 class="split-title">이렇게 계산할게요</h1>
   <p class="top-sub" style="margin-top: 0">이번 기간 {{ look.start.month }}/{{ look.start.day }}~{{ look.end.month }}/{{ look.end.day }} · {{ look.days_left }}일</p>
+  <p class="main-line"><span>{{ look.main.name }}{{ look.main_iga }} 들어오는 {{ look.main.day_of_month }}일마다 새로 시작해요</span>{% if look.choices|length > 1 %}<button type="submit" class="btn-small" name="go" value="pick_main" formaction="/setup/step" formnovalidate>바꾸기</button>{% endif %}</p>
   {% if examples %}
   <div class="notice">아직 예시 값이에요: {{ examples|join(", ") }}. 내 금액과 다르면 고쳐 주세요.</div>
   {% endif %}

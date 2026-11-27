@@ -164,7 +164,7 @@ def set_login_cookie(response, public_id):
 
 
 # ---- 첫 설정 (흐름 2): 다섯 단계, 칸은 예시로 채워 두고 고치게 한다 ----
-def render_setup(request, d, step, today, error=None, editing=False):
+def render_setup(request, d, step, today, error=None, editing=False, picking=False):
     look = None
     if step == setup.LAST_STEP:
         try:
@@ -173,7 +173,7 @@ def render_setup(request, d, step, today, error=None, editing=False):
             return render_setup(request, d, 1, today, str(e))
     return templates.TemplateResponse(request, "setup_step.html", {
         "step": step, "d": d, "draft_json": json.dumps(d, ensure_ascii=False),
-        "today_q": today, "error": error, "editing": editing, "look": look,
+        "today_q": today, "error": error, "editing": editing, "look": look, "picking": picking,
         "examples": setup.example_left(d), "example_incomes": setup.EXAMPLE_INCOMES,
         "example_fixed": setup.EXAMPLE_FIXED, "weekday_text": setup.weekday_text,
         "has_alba": any(r.get("name") == "알바" for r in d["routines"]),
@@ -197,8 +197,14 @@ async def setup_step(request: Request):
     step = int(form.get("step")) if (form.get("step") or "").isdigit() else 1
     step = min(max(step, 1), setup.LAST_STEP)
     editing = form.get("editing") == "1"
-    setup.take_step(d, form, step, editing)
     go = form.get("go") or "next"
+
+    if form.get("picking") == "1":
+        # 5/5의 [바꾸기]에서 연 '어디서 나눌까요?' 화면: 고른 줄을 적고 5/5로 돌아간다
+        if go != "back" and form.get("main") is not None:
+            d["main"] = form.get("main")
+        return render_setup(request, d, setup.LAST_STEP, today)
+    setup.take_step(d, form, step, editing)
 
     if go == "back":
         return render_setup(request, d, max(step - 1, 1), today)
@@ -207,6 +213,8 @@ async def setup_step(request: Request):
         return render_setup(request, d, min(max(int(go[3:]), 1), setup.LAST_STEP - 1), today)
     if go == "edit":
         return render_setup(request, d, 4, today, editing=True)
+    if go == "pick_main":
+        return render_setup(request, d, setup.LAST_STEP, today, picking=True)
     if go == "no_fixed":
         setup.apply_op(d, go)
         return render_setup(request, d, 4, today)

@@ -67,6 +67,7 @@ def parse_step1(form):
             "day_of_month": parse_day(days[i] if i < len(days) else ""),
             "amount": amount,
             "is_main": False,
+            "row": i,
         })
         rows.append(i)
     if not incomes:
@@ -325,9 +326,23 @@ def example_left(d):
     return names + [r.get("name") for r in d["fixed"] if r in EXAMPLE_FIXED]
 
 
+def iga(name):
+    # 이름 뒤에 붙일 '이/가' (받침이 없으면 가)
+    last = name[-1]
+    return "가" if "가" <= last <= "힣" and (ord(last) - 0xAC00) % 28 == 0 else "이"
+
+
+def period_text(day):
+    # 기간이 이 날부터 시작한다는 날짜 범위: 25 -> '25일 ~ 다음 달 24일'
+    return "1일 ~ 그달 말일" if day == 1 else f"{day}일 ~ 다음 달 {day - 1}일"
+
+
 def preview(data, today):
     # 5/5 확인 화면 (R17): 기록이 없는 새 사람의 첫날 홈과 같은 계산 (R2~R8)
     start, end = first_period(data, today)
+    main = [i for i in data["incomes"] if i["is_main"]][0]
+    choices = [{"row": i.get("row", k), "name": i["name"], "range": period_text(i["day_of_month"]),
+                "main": i["is_main"]} for k, i in enumerate(data["incomes"])]
     days_left = (end - today).days + 1
     income = calc.incomes_sum(today, end, data["incomes"])
     fixed = calc.monthly_sum(today, end, data["fixed"])
@@ -335,6 +350,7 @@ def preview(data, today):
     free = calc.free_money(data["balance"], income, fixed, 0, min_living)
     daily = calc.daily_margin(free, days_left)
     return {"start": start, "end": end, "days_left": days_left, "balance": data["balance"],
+            "main": main, "main_iga": iga(main["name"]), "choices": choices,
             "income": income, "fixed": fixed, "min_living": min_living, "free": free,
             "daily": daily, "stage": calc.stage(daily, data["comfort_daily"]),
             "budget": calc.today_budget(today, data["routines"], [], daily)}
