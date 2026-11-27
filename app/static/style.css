@@ -447,19 +447,25 @@ body:has(input:focus, textarea:focus) .fab { display: none; }
 .app:has(.fab) { padding-bottom: calc(80px + 56px + 16px + env(safe-area-inset-bottom)); }
 .fab svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .row-link { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding-left: 8px; font-size: 12px; font-weight: 700; color: var(--blue-dark); }
-.chat { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
-.bubble-row { display: flex; align-items: flex-end; gap: 8px; }
-.bubble-row svg { flex: none; }
-.bubble-row.me { justify-content: flex-end; }
-.say { max-width: 78%; padding: 10px 12px; font-size: 15px; line-height: 1.5; }
-.bubble-row.bot .say { background: #FFFFFF; border-radius: 4px 16px 16px 16px; }
-.bubble-row.me .say { background: var(--blue); color: #FFFFFF; border-radius: 16px 4px 16px 16px; }
-.picks { list-style: none; margin: 0 0 0 48px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.pick { margin: 0; padding: 12px 14px; }
-.pick-name { display: flex; align-items: center; min-height: 44px; font-weight: 700; color: var(--text); text-underline-offset: 3px; }
-.pick-price { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
-.pick .small { margin: 2px 0 0; }
-.pick form { margin-top: 8px; }
+.chat { display: flex; flex-direction: column; gap: 14px; margin: 12px 0; }
+.msg { display: flex; gap: 8px; }
+.msg.me { justify-content: flex-end; }
+.msg .avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(16, 24, 40, 0.1); }
+.msg .col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.msg .name { font-size: 12px; font-weight: 700; color: var(--muted); }
+.say { max-width: 80%; padding: 10px 12px; font-size: 15px; line-height: 1.5; }
+.msg.bot .say { align-self: flex-start; max-width: 100%; background: #FFFFFF; border-radius: 4px 16px 16px 16px; }
+.msg.me .say { background: var(--blue); color: #FFFFFF; border-radius: 16px 4px 16px 16px; }
+.msg .col > .small { margin: 0; }
+.picks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pick-card { padding: 14px; border-radius: 16px; background: #FFFFFF; }
+.pick-name { display: block; font-size: 15px; line-height: 1.4; }
+.pick-price { display: flex; align-items: center; gap: 8px; margin: 6px 0 2px; }
+.pick-card .small { margin: 2px 0 0; }
+.pick-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pick-btns form { margin: 0; }
+.pick-btns .btn-small { width: 100%; text-decoration: none; }
+.btn-small.btn-fill { background: var(--blue); color: #FFFFFF; }
 .starters { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .starters form { margin: 0; }
 .starter-btn { display: block; width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 12px; background: #FFFFFF; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
@@ -479,11 +485,18 @@ body:has(input:focus, textarea:focus) .fab { display: none; }
 
 /* 계획 도우미 (R22) */
 .mode-tabs { margin: 0 0 8px; }
-.plan-card b { font-size: 15px; }
-.plan-card .rows { margin: 6px 0 8px; }
-.plan-look { margin: 4px 0 10px; font-size: 15px; }
-.plan-look .arrow { color: var(--blue); font-weight: 700; }
+.plan-card { padding: 14px; border-radius: 16px; background: #FFFFFF; }
+.plan-title { display: block; font-size: 16px; }
+.plan-sum { margin: 6px 0 4px; padding: 10px 12px; border-radius: 12px; background: var(--blue-soft); font-size: 15px; }
+.plan-sum .arrow { color: var(--blue); font-weight: 700; }
+.plan-rows { list-style: none; margin: 6px 0 10px; padding: 0; }
+.plan-rows li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; border-top: 1px solid var(--line); font-size: 14px; }
+.plan-rows li:first-child { border-top: 0; }
+.plan-rows b { flex: none; color: #0B7A4B; }
+.plan-card .small { margin: 8px 0 0; text-align: center; }
+.done-pill { margin: 0 0 8px; padding: 8px 12px; border-radius: 999px; background: var(--line); text-align: center; font-size: 13px; color: var(--muted); }
 .plan-note { margin: 4px 0 0; color: #0B7A4B; }
+
 /* ---- 11/28 개선안 (지갑이 새 시안, 홈·약속·장바구니·설정) ---- */
 @keyframes jg-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 @keyframes jg-wiggle { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
@@ -658,3 +671,13 @@ h1, h2, .big-money, .top h1, .page-title h1 { letter-spacing: -0.5px; }
 .name-label { display: block; margin: 14px 0 0; font-size: 15px; font-weight: 700; color: var(--text); }
 .name-label:first-of-type { margin-top: 0; }
 
+/* 11/28 채팅 칩: 앞에 '@지갑이' (도틀로 '@도틀로 일정 점검'처럼) */
+.mode-tabs .at { font-style: normal; font-weight: 700; color: var(--blue); }
+.mode-tabs .pick-on .at { color: var(--blue-dark); }
+
+
+/* 11/28 채팅 맨 위: 지금 지갑이 단계 */
+.chat-status { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; }
+.chat-status .jg { flex: none; }
+.chat-status p { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+.chat-status p b { color: var(--text); }

@@ -12,78 +12,104 @@
   <h1>지갑이에게 물어보기</h1>
 </div>
 
-{% if mode == "plan" %}
-{% if c.next_day %}<div class="notice">다음 돈 들어오는 날 {{ c.next_day.month }}/{{ c.next_day.day }}까지 {{ c.days_left }}일 · 지금 하루 여유 {{ "{:,}".format(c.daily or 0) }}원</div>{% endif %}
-{% elif c.budget %}
-<div class="notice">지금 든든을 지키려면 <b>{{ "{:,}".format(c.budget.keep_solid) }}원</b>까지예요. {{ "{:,}".format(c.budget.no_touch) }}원을 넘으면 최소 생활비를 건드려요.</div>
+{# 맨 위: 지금 지갑이 단계 (홈과 같은 계산이라 지갑 상태가 바뀌면 여기도 따라 바뀐다) + 모드별 한 줄 #}
+{% if c.stage %}
+<section class="chat-status">
+  {{ wallet(c.stage, 56) }}
+  <div>
+    <span class="jua-chip st-{{ c.stage }}">지금 지갑이 {{ c.stage }}</span>
+    {% if mode == "plan" and c.next_day %}<p>다음 돈 들어오는 날 {{ c.next_day.month }}/{{ c.next_day.day }}까지 {{ c.days_left }}일 · 지금 하루 여유 {{ "{:,}".format(c.daily or 0) }}원</p>
+    {% elif mode != "plan" and c.budget %}<p>지금 든든을 지키려면 <b>{{ "{:,}".format(c.budget.keep_solid) }}원</b>까지예요. {{ "{:,}".format(c.budget.no_touch) }}원을 넘으면 최소 생활비를 건드려요.</p>{% endif %}
+  </div>
+</section>
 {% endif %}
 
+{# 대화: 도틀로처럼 지갑이 얼굴·이름 아래에 말풍선, 그 아래에 같은 폭으로 카드가 붙는다 #}
+{% macro avatar() %}<span class="avatar" aria-hidden="true">{{ wallet(c.stage or "든든", 30) }}</span>{% endmacro %}
 <div class="chat">
   {% if not c.messages %}
-  <div class="bubble-row bot">
-    {{ wallet(c.stage or "든든", 40) }}
-    <div class="say">{% if mode == "plan" %}다음 돈 들어오는 날까지 어떻게 쓸지 같이 짜 볼까요? 도시락 날이나 모아 둘 돈을 골라 드리고, 적용하면 홈에도 바로 반영돼요.{% else %}찾고 싶은 옷이나 물건을 말해 주세요. 사고 싶은 상품 캡처를 올리면 비슷한 걸 찾아 줄게요.{% endif %}
-    {# 추천 질문: 누르면 그 문장이 바로 보내진다. 하루 한도를 다 쓴 날은 숨긴다 #}
-    {% if c.used < c.limit %}
-    <div class="starters">
-      {% for s in (plan_starters if mode == "plan" else c.starters) %}
-      <form method="post" action="/chat"><input type="hidden" name="mode" value="{{ mode }}">{% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}<button type="submit" class="starter-btn" name="text" value="{{ s }}">{{ s }}</button></form>
-      {% endfor %}
-    </div>
-    {% endif %}
+  <div class="msg bot">
+    {{ avatar() }}
+    <div class="col">
+      <span class="name">지갑이</span>
+      <div class="say">{% if mode == "plan" %}다음 돈 들어오는 날까지 어떻게 쓸지 같이 짜 볼까요? 도시락 날이나 모아 둘 돈을 골라 드리고, 적용하면 홈에도 바로 반영돼요.{% else %}찾고 싶은 옷이나 물건을 말해 주세요. 사고 싶은 상품 캡처를 올리면 비슷한 걸 찾아 줄게요.{% endif %}
+      {# 추천 질문: 누르면 그 문장이 바로 보내진다. 하루 한도를 다 쓴 날은 숨긴다 #}
+      {% if c.used < c.limit %}
+      <div class="starters">
+        {% for s in (plan_starters if mode == "plan" else c.starters) %}
+        <form method="post" action="/chat"><input type="hidden" name="mode" value="{{ mode }}">{% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}<button type="submit" class="starter-btn" name="text" value="{{ s }}">{{ s }}</button></form>
+        {% endfor %}
+      </div>
+      {% endif %}
+      </div>
     </div>
   </div>
   {% endif %}
   {% for m in c.messages %}
-  <div class="bubble-row {{ 'me' if m.role == 'user' else 'bot' }}"{% if loop.last %} id="last"{% endif %}>
-    {% if m.role != 'user' %}{{ wallet(c.stage or "든든", 40) }}{% endif %}
-    <div class="say">{{ m.content }}</div>
-  </div>
-  {% if m["items"] %}
-  <ul class="picks">
-    {% for it in m["items"] %}
-    <li class="card pick">
-      <a class="pick-name" href="{{ it.url }}" target="_blank" rel="noopener">{{ it.name }}</a>
-      <div class="pick-price">
-        {% if it.price %}<b>{{ "{:,}".format(it.price) }}원</b>{% if it.chip %}<span class="jua-chip st-{{ it.chip }}">사면 {{ it.chip }}</span>{% endif %}
-        {% else %}<span class="small">가격은 무신사에서 확인해 주세요</span>{% endif %}
-      </div>
-      {% if it.reason %}<p class="small">{{ it.reason }}</p>{% endif %}
-      {% if it.price %}
-      <form method="post" action="/chat/add">
-        {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-        <input type="hidden" name="name" value="{{ it.name }}">
-        <input type="hidden" name="price" value="{{ it.price }}">
-        <input type="hidden" name="url" value="{{ it.url }}">
-        <button type="submit" class="btn-small">장바구니에 담기</button>
-      </form>
+  {% if m.role == 'user' %}
+  <div class="msg me"{% if loop.last %} id="last"{% endif %}><div class="say">{{ m.content }}</div></div>
+  {% else %}
+  <div class="msg bot"{% if loop.last %} id="last"{% endif %}>
+    {{ avatar() }}
+    <div class="col">
+      <span class="name">지갑이</span>
+      <div class="say">{{ m.content }}</div>
+      {% if m["items"] %}
+      {# 상품 카드: 이름 → 가격과 '사면 단계' → 이유 → [무신사에서 보기] [장바구니에 담기] #}
+      <ul class="picks">
+        {% for it in m["items"] %}
+        <li class="pick-card">
+          <b class="pick-name">{{ it.name }}</b>
+          <div class="pick-price">
+            {% if it.price %}<b>{{ "{:,}".format(it.price) }}원</b>{% if it.chip %}<span class="jua-chip st-{{ it.chip }}">사면 {{ it.chip }}</span>{% endif %}
+            {% else %}<span class="small">가격은 무신사에서 확인해 주세요</span>{% endif %}
+          </div>
+          {% if it.reason %}<p class="small">{{ it.reason }}</p>{% endif %}
+          <div class="pick-btns">
+            <a class="btn-small" href="{{ it.url }}" target="_blank" rel="noopener">무신사에서 보기</a>
+            {% if it.price %}
+            <form method="post" action="/chat/add">
+              {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+              <input type="hidden" name="name" value="{{ it.name }}">
+              <input type="hidden" name="price" value="{{ it.price }}">
+              <input type="hidden" name="url" value="{{ it.url }}">
+              <button type="submit" class="btn-small btn-fill">장바구니에 담기</button>
+            </form>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="small">무신사 검색 결과에서 골랐어요. 가격은 무신사에서 다시 확인해 주세요.</p>
       {% endif %}
-    </li>
-    {% endfor %}
-  </ul>
-  <p class="center-note">무신사 검색 결과에서 골랐어요. 가격은 무신사에서 다시 확인해 주세요.</p>
-  {% endif %}
-  {% if m.plan %}
-  {# 계획 제안 카드: 숫자는 앱이 지금 지갑으로 다시 계산한다 #}
-  <section class="card pick plan-card">
-    <b>이렇게 바꿔 볼까요?</b>
-    <ul class="rows">
-      {% for meal in m.plan.meals %}<li class="row"><span class="row-main">{{ meal.label }} 점심 도시락</span><span class="row-end"><b>+{{ "{:,}".format(meal.amount) }}원</b></span></li>{% endfor %}
-      {% if m.plan.save %}<li class="row"><span class="row-main">다음 돈 들어오는 날까지 모아 두기</span><span class="row-end"><b>−{{ "{:,}".format(m.plan.save) }}원</b></span></li>{% endif %}
-    </ul>
-    {% if m.applied %}
-    <p class="small">적용했어요. 홈의 '자세히 보기'에서 되돌릴 수 있어요.</p>
-    {% elif m.look %}
-    <p class="plan-look">하루 여유 {{ "{:,}".format(m.look.before) }}원 <span class="arrow">→</span> <b>{{ "{:,}".format(m.look.after) }}원</b> <span class="jua-chip st-{{ m.look.after_stage }}">{{ m.look.after_stage }}</span></p>
-    <form method="post" action="/plan/apply">
-      {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-      <input type="hidden" name="message_id" value="{{ m.id }}">
-      <button type="submit" class="btn">이대로 적용</button>
-    </form>
-    {% else %}
-    <p class="small">이번 기간이 끝나서 적용할 수 없어요.</p>
-    {% endif %}
-  </section>
+      {% if m.plan %}
+      {# 계획 제안 카드: 결과(하루 여유)를 맨 위에, 바꿀 것은 '아껴요·모아 둬요'로. 숫자는 앱이 지금 지갑으로 다시 계산한다 #}
+      <section class="plan-card">
+        <b class="plan-title">이렇게 바꿔 볼까요?</b>
+        {% if m.look and not m.applied %}
+        <p class="plan-sum">하루 여유 {{ "{:,}".format(m.look.before) }}원 <span class="arrow">→</span> <b>{{ "{:,}".format(m.look.after) }}원</b> <span class="jua-chip st-{{ m.look.after_stage }}">{{ m.look.after_stage }}</span></p>
+        {% endif %}
+        <ul class="plan-rows">
+          {% for meal in m.plan.meals %}<li><span>{{ meal.label }} 점심 도시락</span><b>{{ "{:,}".format(meal.amount) }}원 아껴요</b></li>{% endfor %}
+          {% if m.plan.save %}<li><span>{% if c.next_day %}{{ c.next_day.month }}/{{ c.next_day.day }}까지{% else %}다음 돈 들어오는 날까지{% endif %} 모아 두기</span><b>{{ "{:,}".format(m.plan.save) }}원 모아 둬요</b></li>{% endif %}
+        </ul>
+        {% if m.applied %}
+        <p class="done-pill">계획에 넣었어요 · 홈 '자세히 보기'에서 되돌릴 수 있어요</p>
+        <a class="btn btn-sub" href="/{{ q }}">홈에서 보기</a>
+        {% elif m.look %}
+        <form method="post" action="/plan/apply">
+          {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
+          <input type="hidden" name="message_id" value="{{ m.id }}">
+          <button type="submit" class="btn">이대로 적용</button>
+        </form>
+        <p class="small">다른 안이 필요하면 아래에 말해 주세요</p>
+        {% else %}
+        <p class="small">이번 기간이 끝나서 적용할 수 없어요.</p>
+        {% endif %}
+      </section>
+      {% endif %}
+    </div>
+  </div>
   {% endif %}
   {% endfor %}
 </div>
@@ -94,8 +120,9 @@
 {# 화면 아래에 붙는 영역: 모드 칩(계획 짜기 R22 / 무신사에서 찾기 R21) + 입력줄. 답이 오래 걸릴 수 있어서 보내는 동안 버튼을 막고 기다리라고 알려 준다 (JS는 form마다 한 줄) #}
 <div class="chat-dock">
 <div class="chips mode-tabs">
-  {% if mode == "plan" %}<span class="chip chip-blue pick-on">계획 짜기</span><a class="chip pick-link" href="/chat?mode=shop{{ qa }}">무신사에서 찾기</a>
-  {% else %}<a class="chip pick-link" href="/chat?mode=plan{{ qa }}">계획 짜기</a><span class="chip chip-blue pick-on">무신사에서 찾기</span>{% endif %}
+  {# 도틀로 입력줄 칩처럼 '@지갑이'를 앞에 붙여, 누구에게 무엇을 시키는지 보이게 #}
+  {% if mode == "plan" %}<span class="chip chip-blue pick-on"><i class="at">@지갑이</i> 계획 짜기</span><a class="chip pick-link" href="/chat?mode=shop{{ qa }}"><i class="at">@지갑이</i> 무신사에서 찾기</a>
+  {% else %}<a class="chip pick-link" href="/chat?mode=plan{{ qa }}"><i class="at">@지갑이</i> 계획 짜기</a><span class="chip chip-blue pick-on"><i class="at">@지갑이</i> 무신사에서 찾기</span>{% endif %}
 </div>
 {% if c.used < c.limit %}
 <form method="post" action="/chat" enctype="multipart/form-data" class="chat-form" onsubmit="this.querySelector('.send').disabled = true; this.querySelector('.wait').hidden = false">

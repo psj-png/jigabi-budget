@@ -60,6 +60,9 @@ def test_적용하면_모든_화면이_따라_바뀐다(conn, user):
     chat = shop.make_chat(conn, user, TODAY)
     card = chat["messages"][-1]
     assert card["mode"] == "plan" and [m["day"] for m in card["plan"]["meals"]] == ["2026-11-02", "2026-11-03"]
+    # 계획 짜기 대화는 무신사 대화 화면에 섞이지 않는다
+    assert shop.make_chat(conn, user, TODAY, "shop")["messages"] == []
+    assert shop.make_chat(conn, user, TODAY, "plan")["messages"][-1]["id"] == card["id"]
     expected = calc.daily_margin(before["free"] + 12000 - 30000, before["days_left"])
     assert (card["look"]["before"], card["look"]["after"]) == (before["daily"], expected)
 

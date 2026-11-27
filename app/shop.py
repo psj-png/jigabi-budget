@@ -24,12 +24,12 @@ def budget_line(b):
             f"{b['no_touch']:,}원을 넘으면 최소 생활비를 건드려요.")
 
 
-def make_chat(conn, user_id, today):
-    # 채팅 화면: 최근 대화 30개, 상품마다 '사면 단계' 칩은 지금 지갑으로 다시 계산한다 (장바구니 칩과 같은 R11)
+def make_chat(conn, user_id, today, mode=None):
+    # 채팅 화면: 그 모드의 최근 대화 30개, 상품마다 '사면 단계' 칩은 지금 지갑으로 다시 계산한다 (장바구니 칩과 같은 R11)
     h = make_home(conn, user_id, today)
     comfort = queries.get_user(conn, user_id)["comfort_daily"]
     messages = []
-    for m in queries.get_chat(conn, user_id, 30):
+    for m in queries.get_chat(conn, user_id, 30, mode):
         items = json.loads(m["items_json"]) if m["items_json"] else []
         for it in items:
             it["chip"] = None

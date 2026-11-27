@@ -587,14 +587,21 @@ def insert_chat(conn, user_id, day, role, content, items_json=None, mode="shop",
     conn.commit()
 
 
-def get_chat(conn, user_id, limit):
-    # 최근 limit개를 오래된 것부터
+def get_chat(conn, user_id, limit, mode=None):
+    # 최근 limit개를 오래된 것부터. mode를 주면 그 대화(계획 짜기/무신사에서 찾기)만
     with conn.cursor() as cur:
-        cur.execute(
-            "SELECT message_id, role, mode, content, items_json, plan_json, applied FROM chat_messages "
-            "WHERE user_id = %s ORDER BY message_id DESC LIMIT %s",
-            (user_id, limit),
-        )
+        if mode is None:
+            cur.execute(
+                "SELECT message_id, role, mode, content, items_json, plan_json, applied FROM chat_messages "
+                "WHERE user_id = %s ORDER BY message_id DESC LIMIT %s",
+                (user_id, limit),
+            )
+        else:
+            cur.execute(
+                "SELECT message_id, role, mode, content, items_json, plan_json, applied FROM chat_messages "
+                "WHERE user_id = %s AND mode = %s ORDER BY message_id DESC LIMIT %s",
+                (user_id, mode, limit),
+            )
         rows = cur.fetchall()
     return list(reversed(rows))
 

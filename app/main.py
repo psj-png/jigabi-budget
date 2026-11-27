@@ -755,13 +755,14 @@ def chat_get(request: Request, today: str = None, mode: str = "shop"):
     if not ai.enabled():
         raise HTTPException(status_code=404)
     now = pick_now(request, today)
+    mode = "plan" if mode == "plan" else "shop"
     conn = get_conn()
     try:
-        data = shop.make_chat(conn, user_id, now)
+        data = shop.make_chat(conn, user_id, now, mode)  # 계획 짜기와 무신사 대화는 따로 보여 준다
     finally:
         conn.close()
     return templates.TemplateResponse(request, "chat.html", {
-        "chat": data, "today_q": today, "mode": "plan" if mode == "plan" else "shop",
+        "chat": data, "today_q": today, "mode": mode,
         "plan_starters": plan.STARTERS,
     })
 
