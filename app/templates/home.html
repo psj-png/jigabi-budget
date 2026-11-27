@@ -48,15 +48,15 @@
   {% if h.budget is none %}
   <p class="stage-line">이번 기간 끝 · 새 기간에 다시 봐요</p>
   {% else %}
-  <div class="hero-top">
-    {{ wallet(h.stage, 56) }}
+  <div class="hero-big">
     <div>
       <span class="stage-chip stage-{{ h.stage }}">{{ h.stage }}</span>
       <p class="stage-line">{{ h.stage_line }}</p>
+      <div class="label">{% if h.logged %}내일{% else %}오늘{% endif %} 쓸 수 있는 돈</div>
+      <div class="big-money">{{ "{:,}".format(h.budget) }}원</div>
     </div>
+    {{ wallet(h.stage, 124) }}
   </div>
-  <div class="label">{% if h.logged %}내일{% else %}오늘{% endif %} 쓸 수 있는 돈</div>
-  <div class="big-money">{{ "{:,}".format(h.budget) }}원</div>
   {% if h.changes %}<p class="small plan-note">지갑이와 바꾼 계획 {{ h.changes|length }}개가 반영돼 있어요</p>{% endif %}
   {% endif %}
 
@@ -110,17 +110,12 @@
   </details>
 </section>
 
-{# 장바구니 카드 #}
-<section class="card card-blue">
-  {% if wish_count %}
-  <h2>장바구니에 {{ wish_count }}개 있어요</h2>
-  <p>체크해 보면 사도 되는지 바로 보여줘요.</p>
-  {% else %}
-  <h2>사고 싶은 게 있나요?</h2>
-  <p>사기 전에 지갑이가 얼마나 홀쭉해지는지 미리 봐요.</p>
-  {% endif %}
-  <a class="btn" href="/cart{{ q }}">장바구니 미리보기</a>
-</section>
+{# 장바구니 안내: 한 줄 카드 (누르면 장바구니) #}
+<a class="row-card" href="/cart{{ q }}">
+  <span class="rc-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.4 11h10.2L20 7H6"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span>
+  <span class="rc-text">{% if wish_count %}<b>장바구니에 {{ wish_count }}개 있어요</b><small>사면 지갑이가 어떻게 될까요?</small>{% else %}<b>사고 싶은 게 있나요?</b><small>사기 전에 지갑이가 얼마나 홀쭉해지는지 봐요</small>{% endif %}</span>
+  <svg class="rc-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+</a>
 
 {# 13~15 밤 잔액 카드: 적기 전 / 쓴 돈으로 / 맞나요? / 적은 뒤가 모두 이 자리에서 바뀐다 #}
 {% if card %}
@@ -128,7 +123,8 @@
 <section class="card tonight" id="tonight">
   {% if c.mode == "result" %}
   {% set r = c.result %}
-  <h2>{% if c.is_today %}오늘 밤 잔액{% else %}어젯밤 잔액{% endif %} <span class="small">{{ c.day.month }}/{{ c.day.day }}</span></h2>
+  <h2>{% if c.is_today %}오늘 밤 잔액{% else %}어젯밤 잔액{% endif %} <span class="small">{{ c.day.month }}/{{ c.day.day }}</span>
+    <a class="btn-small h2-btn" href="/?edit=1&amp;day={{ c.day }}{{ qa }}#tonight">고치기</a></h2>
   {% if r.left is none %}
   <p class="result-line">{{ "{:,}".format(r.spent) }}원 썼어요</p>
   {% elif r.left >= 0 %}
@@ -142,20 +138,21 @@
   <p class="next-line">{% if c.is_today %}내일{% else %}오늘{% endif %} {{ "{:,}".format(r.after_budget) }}원 쓸 수 있어요</p>
   {% endif %}
   <span class="jua-chip st-{{ r.stage_after }}">{% if r.stage_before == r.stage_after %}지갑이 {{ r.stage_after }} 유지{% else %}지갑이 {{ r.stage_before }}→{{ r.stage_after }}{% endif %}</span>
-  <a class="link-btn" href="/?edit=1&amp;day={{ c.day }}{{ qa }}#tonight">고치기</a>
 
   {% else %}
-  <h2>{% if c.is_today %}오늘 밤 잔액{% else %}어젯밤 잔액{% endif %} <span class="small">{{ c.day.month }}/{{ c.day.day }}</span></h2>
+  <h2>{% if c.is_today %}오늘 밤 잔액{% else %}어젯밤 잔액{% endif %} <span class="small">{{ c.day.month }}/{{ c.day.day }}</span>
+    {% if c.other_day %}<a class="btn-small h2-btn" href="/?day={{ c.other_day }}{{ qa }}#tonight">{% if c.is_today %}어젯밤 것 적기{% else %}오늘 밤 것 적기{% endif %}</a>{% endif %}</h2>
   {% if h.missed_days > 0 and c.is_today %}
   <p class="small">{{ h.missed_days }}일 동안 안 적었어요. 지금 잔액만 적으면 다시 맞춰요.</p>
   {% endif %}
-  {% if c.other_day %}
-  <div class="chips pick">
-    <span class="chip chip-blue pick-on">{% if c.is_today %}오늘 밤{% else %}어젯밤{% endif %}</span>
-    <a class="chip pick-link" href="/?day={{ c.other_day }}{{ qa }}#tonight">{% if c.is_today %}어젯밤{% else %}오늘 밤{% endif %}</a>
+  {% if c.error %}<div class="warn">{{ c.error }}</div>{% endif %}
+
+  {% if not c.form.message and c.mode != "confirm" %}
+  <div class="seg" role="tablist" aria-label="적는 방법">
+    <a href="/?day={{ c.day }}{{ qa }}#tonight" role="tab"{% if c.mode != "spent" %} aria-current="true"{% endif %}>지금 잔액</a>
+    <a href="/?mode=spent&amp;day={{ c.day }}{{ qa }}#tonight" role="tab"{% if c.mode == "spent" %} aria-current="true"{% endif %}>{% if c.is_today %}오늘{% else %}어제{% endif %} 쓴 돈</a>
   </div>
   {% endif %}
-  {% if c.error %}<div class="warn">{{ c.error }}</div>{% endif %}
 
   {% if c.form.message %}
   <p class="small">{{ c.form.message }}</p>
@@ -168,7 +165,6 @@
     <div class="money-input"><input id="spent" type="number" name="spent" min="0" inputmode="numeric" required><span>원</span></div>
     <button type="submit" class="btn">잔액 계산하기</button>
   </form>
-  <a class="link-btn" href="/?day={{ c.day }}{{ qa }}#tonight">잔액으로 적을게요</a>
   {% elif c.mode == "confirm" %}
   <p class="result-line">그럼 지금 {{ "{:,}".format(c.guess)|replace("-", "−") }}원이겠네요. 맞나요?</p>
   <form method="post" action="/balance">
@@ -178,13 +174,13 @@
     {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
     <button type="submit" class="btn">맞아요, 이걸로 적을게요</button>
   </form>
-  <a class="link-btn" href="/?day={{ c.day }}{{ qa }}#tonight">아니요, 잔액으로 적을게요</a>
+  <a class="btn btn-sub gap-top" href="/?day={{ c.day }}{{ qa }}#tonight">아니요, 잔액으로 적을게요</a>
   {% else %}
   {# 13 적기 전 #}
   <form method="post" action="/balance">
     <input type="hidden" name="day" value="{{ c.day }}">
     {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
-    <label class="label" for="balance">지금 잔액</label>
+    <label class="label" for="balance">통장 앱에 보이는 숫자 그대로</label>
     <div class="money-input"><input id="balance" type="number" name="balance" inputmode="numeric" required><span>원</span></div>
     {% if c.form.show_income %}
     <label class="label" for="income_in">들어온 돈</label>
@@ -192,7 +188,6 @@
     {% endif %}
     <button type="submit" class="btn">적기</button>
   </form>
-  <a class="link-btn" href="/?mode=spent&amp;day={{ c.day }}{{ qa }}#tonight">잔액을 모르겠어요? 쓴 돈으로 적기</a>
   {% endif %}
   {% endif %}
 </section>
