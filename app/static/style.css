@@ -201,7 +201,7 @@ input, select, textarea { font-size: 16px; }  /* 16px보다 작으면 아이폰�
 /* 밤 잔액 */
 .pick { margin-bottom: 12px; }
 .pick .chip { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; font-size: 14px; text-decoration: none; }
-.pick-link { background: #FFFFFF; border: 1px solid var(--border); color: var(--muted); }
+.pick-link { text-decoration: none; background: #FFFFFF; border: 1px solid var(--border); color: var(--muted); }
 .pick-on { font-weight: 700; border: 1.5px solid var(--blue); }
 .money-input { display: flex; align-items: center; gap: 8px; min-height: 52px; margin: 4px 0 6px; padding: 0 14px; border: 1.5px solid var(--blue); border-radius: 12px; background: #FFFFFF; }
 .money-input input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: 18px; font-weight: 700; }
@@ -475,7 +475,7 @@ body:has(input:focus, textarea:focus) .fab { display: none; }
 .chat-form .small { flex-basis: 100%; margin: 0; }
 
 /* 계획 도우미 (R22) */
-.mode-tabs { margin: 0 0 12px; }
+.mode-tabs { margin: 0 0 8px; }
 .plan-card b { font-size: 15px; }
 .plan-card .rows { margin: 6px 0 8px; }
 .plan-look { margin: 4px 0 10px; font-size: 15px; }

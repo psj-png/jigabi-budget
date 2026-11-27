@@ -12,12 +12,6 @@
   <h1>지갑이에게 물어보기</h1>
 </div>
 
-{# 두 가지 일: 계획 짜기 (R22) / 무신사에서 찾기 (R21) #}
-<div class="chips pick mode-tabs">
-  {% if mode == "plan" %}<span class="chip chip-blue pick-on">계획 짜기</span><a class="chip pick-link" href="/chat?mode=shop{{ qa }}">무신사에서 찾기</a>
-  {% else %}<a class="chip pick-link" href="/chat?mode=plan{{ qa }}">계획 짜기</a><span class="chip chip-blue pick-on">무신사에서 찾기</span>{% endif %}
-</div>
-
 {% if mode == "plan" %}
 {% if c.next_day %}<div class="notice">다음 돈 들어오는 날 {{ c.next_day.month }}/{{ c.next_day.day }}까지 {{ c.days_left }}일 · 지금 하루 여유 {{ "{:,}".format(c.daily or 0) }}원</div>{% endif %}
 {% elif c.budget %}
@@ -87,16 +81,20 @@
 
 {% if c.used >= c.limit %}
 <div class="notice">오늘은 {{ c.limit }}번 다 물어봤어요. 내일 다시 도와줄게요.</div>
-{% else %}
-{% if not c.messages %}
+{% elif not c.messages %}
 <div class="chips starters">
   {% for s in (plan_starters if mode == "plan" else c.starters) %}
   <form method="post" action="/chat"><input type="hidden" name="mode" value="{{ mode }}">{% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}<button type="submit" class="chip" name="text" value="{{ s }}">{{ s }}</button></form>
   {% endfor %}
 </div>
 {% endif %}
-{# 화면 아래에 붙는 입력줄. 답이 오래 걸릴 수 있어서 보내는 동안 버튼을 막고 기다리라고 알려 준다 (JS는 form마다 한 줄) #}
+{# 화면 아래에 붙는 영역: 모드 칩(계획 짜기 R22 / 무신사에서 찾기 R21) + 입력줄. 답이 오래 걸릴 수 있어서 보내는 동안 버튼을 막고 기다리라고 알려 준다 (JS는 form마다 한 줄) #}
 <div class="chat-dock">
+<div class="chips mode-tabs">
+  {% if mode == "plan" %}<span class="chip chip-blue pick-on">계획 짜기</span><a class="chip pick-link" href="/chat?mode=shop{{ qa }}">무신사에서 찾기</a>
+  {% else %}<a class="chip pick-link" href="/chat?mode=plan{{ qa }}">계획 짜기</a><span class="chip chip-blue pick-on">무신사에서 찾기</span>{% endif %}
+</div>
+{% if c.used < c.limit %}
 <form method="post" action="/chat" enctype="multipart/form-data" class="chat-form" onsubmit="this.querySelector('.send').disabled = true; this.querySelector('.wait').hidden = false">
   <input type="hidden" name="mode" value="{{ mode }}">
   {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
@@ -109,6 +107,6 @@
   <p class="wait small" hidden>{% if mode == "plan" %}지갑이가 계획을 짜고 있어요.{% else %}지갑이가 무신사를 찾고 있어요. 30초쯤 걸릴 수 있어요.{% endif %}</p>
   <p class="used small">오늘 {{ c.used }}/{{ c.limit }}번 물어봤어요</p>
 </form>
-</div>
 {% endif %}
+</div>
 {% endblock %}
