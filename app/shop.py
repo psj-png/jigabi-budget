@@ -47,6 +47,7 @@ def make_chat(conn, user_id, today, mode=None):
             "used": queries.count_chat_today(conn, user_id, today), "limit": DAILY_LIMIT,
             "starters": STARTERS, "stage": h.get("stage"),
             "next_day": h["end"] + timedelta(days=1) if h["ready"] else None,
+            "short": max(-h["free"], 0) if h["ready"] else 0,
             "days_left": h.get("days_left"), "daily": h.get("daily")}
 
 

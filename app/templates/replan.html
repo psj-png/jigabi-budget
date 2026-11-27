@@ -72,10 +72,19 @@
       <div class="cut-row">
         <b>{{ row.appt.appt_date.month }}/{{ row.appt.appt_date.day }} {{ row.appt.title }} {{ "{:,}".format(row.appt.amount) }} → {{ "{:,}".format(row.appt.amount - row.cut) }}원</b>
         <div class="money-input"><input type="number" name="cut_{{ row.appt.appt_id }}" min="0" max="{{ row.appt.amount }}" value="{{ row.cut }}" aria-label="줄일 금액"><span>원 줄이기</span></div>
-        <label class="check-line"><input type="checkbox" name="apply_{{ row.appt.appt_id }}" checked> 적용</label>
+        <label class="check-line"><input type="checkbox" name="apply_{{ row.appt.appt_id }}"{% if row.on %} checked{% endif %}> 적용</label>
       </div>
       {% endfor %}
       <p>칸을 고치면 저장할 때 비상금에서 빌릴 돈을 다시 계산해요</p>
+      {% if ai_on and not talked %}
+      {# R23 어떤 약속을 얼마나 줄일지는 사용자만 알아서, 채팅에서 사정을 말하면 지갑이가 고른다 #}
+      {% set say = "산 것 때문에 " ~ "{:,}".format(r.short) ~ "원 모자라. 어떻게 메울까?" %}
+      <a class="row-card talk-card" href="/chat?mode=plan&amp;text={{ say|urlencode }}{{ ('&today=' ~ today_q) if today_q else '' }}">
+        <span class="rc-icon talk-face" aria-hidden="true">{{ wallet(r.stage or "든든", 28) }}</span>
+        <span class="rc-text"><b>어떤 약속을 얼마나 줄일까요?</b><small>지갑이랑 이야기해 보세요. 도시락 날도 같이 찾아 줘요</small></span>
+        <svg class="rc-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+      {% endif %}
       {% else %}
       <p>줄일 약속이 없어요</p>
       {% endif %}

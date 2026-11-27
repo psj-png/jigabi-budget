@@ -12,7 +12,8 @@ def _appts_to_cut(conn, user_id, today, h):
             if first <= a["appt_date"] <= h["end"]]
 
 
-def make_replan(conn, user_id, today):
+def make_replan(conn, user_id, today, propose_cuts=True):
+    # propose_cuts=False: 채팅에서 약속을 이미 줄이고 돌아온 경우 (R23). 또 줄이자고 하지 않고 남은 돈은 비상금으로
     h = make_home(conn, user_id, today)
     if not h["ready"]:
         return {"ready": False}
@@ -20,14 +21,16 @@ def make_replan(conn, user_id, today):
     user = queries.get_user(conn, user_id)
     short = -h["free"] if h["free"] < 0 else 0
     appts = _appts_to_cut(conn, user_id, today, h)
-    cuts, borrow, left = calc.replan_proposal(short, appts, user["emergency_fund"])
+    cuts, borrow, left = calc.replan_proposal(short, appts if propose_cuts else [], user["emergency_fund"])
+    if not propose_cuts:
+        cuts = [0] * len(appts)
 
     items = queries.get_items(conn, user_id)
     returnable = [i for i in items if i["status"] == "bought" and calc.can_return(i["bought_date"], today)]
     # 이번 기간에 이미 빌린 비상금 (비상금이 0원이면 '이미 빌렸어요'로 보여준다)
     per = queries.get_period(conn, user_id, today)
     borrowed = calc.loans_sum(per["start_date"], h["end"], queries.get_loans(conn, user_id))
-    rows = [{"appt": a, "cut": c} for a, c in zip(appts, cuts)]
+    rows = [{"appt": a, "cut": c, "on": propose_cuts} for a, c in zip(appts, cuts)]
     hours = calc.work_hours(left, user["hourly_wage"]) if left > 0 else None
     # 화면용: 지금 단계, 남은 날, 갚기 시작하는 날, 제안대로 메운 뒤의 단계 (새 규칙 없이 calc 그대로)
     after_stage = None

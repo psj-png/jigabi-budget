@@ -1,5 +1,6 @@
 # 지갑이 계획 도우미 (R22): 다음 돈 들어오는 날까지 어떻게 쓸지 같이 짜고, 고른 것만 계획에 넣는다
 # 바꿀 수 있는 건 두 가지: 도시락 날(그날 점심값 하나가 최소 생활비에서 빠짐), 모아 두기(이번 기간 여유 돈에서 뺌)
+# 산 뒤 돈이 모자라면 (R23) 약속 줄이기도 고를 수 있다: 사용자가 말한 사정을 보고 약속마다 1/3까지
 import json
 from datetime import date, timedelta
 
@@ -32,6 +33,15 @@ def options(conn, user_id, today):
     max_save = max((h["free"] - (comfort // 2) * h["days_left"]) // 1000 * 1000, 0)
     next_day = h["end"] + timedelta(days=1)
     appts = [a for a in queries.get_appointments(conn, user_id) if first <= a["appt_date"] <= h["end"]]
+    # 돈이 모자라면 줄일 수 있는 약속: 약속마다 금액의 1/3 (천 원 버림), 다시 짜기(R14)와 같은 기준
+    short = -h["free"] if h["free"] < 0 else 0
+    cuts = []
+    if short:
+        for a in appts:
+            most = a["amount"] // 3 // 1000 * 1000
+            if most > 0:
+                cuts.append({"appt_id": a["appt_id"], "label": f"{a['appt_date'].month}/{a['appt_date'].day} {a['title']}",
+                             "amount": a["amount"], "max": most})
     context = {
         "오늘": today.isoformat(), "기간 끝": h["end"].isoformat(), "남은 날": h["days_left"],
         "여유 돈": h["free"], "하루 여유": h["daily"], "지갑이 단계": h["stage"], "넉넉 기준": comfort,
@@ -42,7 +52,12 @@ def options(conn, user_id, today):
         "도시락으로 바꿀 수 있는 날": [{"날": m["day"], "아끼는 돈": m["amount"]} for m in meals],
         "모아 둘 수 있는 최대": max_save,
     }
-    return {"context": context, "meals": meals, "max_save": max_save, "comfort": comfort}, h
+    if short:
+        context["모자란 돈"] = short
+        context["줄일 수 있는 약속"] = [{"appt_id": c["appt_id"], "약속": c["label"], "금액": c["amount"],
+                                    "줄일 수 있는 최대": c["max"]} for c in cuts]
+    return {"context": context, "meals": meals, "max_save": max_save, "comfort": comfort,
+            "short": short, "cuts": cuts}, h
 
 
 def choose(opts, picked):
@@ -50,17 +65,32 @@ def choose(opts, picked):
     allowed = {m["day"]: m for m in opts["meals"]}
     meals = [allowed[d] for d in dict.fromkeys(picked.get("meal_days") or []) if d in allowed]
     save = min(max(picked.get("save") or 0, 0), opts["max_save"]) // 1000 * 1000
-    if not meals and not save:
+    # 약속 줄이기 (R23): 선택지 안의 약속만, 약속마다 최대 안, 1,000원 단위, 합이 모자란 돈을 넘지 않게
+    allowed_cuts = {c["appt_id"]: c for c in opts["cuts"]}
+    cuts, left = [], opts["short"]
+    for p in picked.get("cuts") or []:
+        c = allowed_cuts.get(p.get("appt_id"))
+        if c is None or c["appt_id"] in [x["appt_id"] for x in cuts]:
+            continue
+        cut = min(max(p.get("amount") or 0, 0), c["max"], left) // 1000 * 1000
+        if cut > 0:
+            cuts.append({"appt_id": c["appt_id"], "label": c["label"], "amount": c["amount"], "cut": cut})
+            left -= cut
+    if not meals and not save and not cuts:
         return None
-    return {"meals": meals, "save": save}
+    return {"meals": meals, "save": save, "cuts": cuts}
 
 
 def preview(h, proposal, comfort):
     # 제안대로 하면 하루 여유가 어떻게 되나 (도시락 날은 아직 안 지난 날만 센다)
     first = calc.first_day(h["today"], h["logged"])
     gain = sum(m["amount"] for m in proposal["meals"] if date.fromisoformat(m["day"]) >= first)
-    daily = calc.daily_margin(h["free"] + gain - proposal["save"], h["days_left"])
-    return {"before": h["daily"], "before_stage": h["stage"], "after": daily, "after_stage": calc.stage(daily, comfort)}
+    gain += sum(c["cut"] for c in proposal.get("cuts", []))
+    after_free = h["free"] + gain - proposal["save"]
+    daily = calc.daily_margin(after_free, h["days_left"])
+    # 모자란 돈이 있으면 얼마가 남는지도 (남는 돈은 다시 짜기에서 비상금으로)
+    return {"before": h["daily"], "before_stage": h["stage"], "after": daily, "after_stage": calc.stage(daily, comfort),
+            "before_short": max(-h["free"], 0), "after_short": max(-after_free, 0)}
 
 
 def ask(conn, user_id, today, text, call=None):
@@ -103,6 +133,12 @@ def apply(conn, user_id, today, message_id):
         save = min(proposal["save"], opts["max_save"])
         if save > 0:
             queries.add_plan_change(conn, user_id, h["end"], "save", save, "다음 돈 들어오는 날까지 모아 두기")
+        # 약속 줄이기 (R23): 다시 짜기에서 줄이는 것과 같이 약속 금액을 바꾼다 (지금 최대 안에서)
+        allowed_cuts = {c["appt_id"]: c for c in opts["cuts"]}
+        for c in proposal.get("cuts", []):
+            now_c = allowed_cuts.get(c["appt_id"])
+            if now_c is not None:
+                queries.update_appointment_amount(conn, user_id, c["appt_id"], now_c["amount"] - min(c["cut"], now_c["max"]))
         queries.mark_applied(conn, user_id, message_id)
         conn.commit()
     except Exception:

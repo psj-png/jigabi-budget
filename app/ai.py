@@ -254,20 +254,29 @@ PLAN_PROMPT = (
     "- 끼니를 거르라는 말은 하지 마. 밖에서 사 먹을 점심을 도시락으로 바꾸는 것만 제안해.\n"
     "- 다가오는 약속이 있으면 그 전후로 어떻게 쓰면 좋을지 짧게 말해 줘.\n"
     "- 바꿀 필요가 없으면 meal_days는 비우고 save는 0.\n"
+    "- '모자란 돈'이 있으면 물건을 사서 이번 기간 돈이 모자란 거야. 모아 두기는 0으로 두고, 도시락 날과 약속 줄이기(cuts)로 메울 방법을 골라.\n"
+    "- 약속은 사용자가 줄여도 된다고 말한 것만 줄여 (예: 술자리는 1차만). 그대로 두겠다는 약속은 고르지 마. "
+    "사용자가 약속에 대해 아무 말도 안 했으면 cuts는 비우고, 어떤 약속을 줄여도 되는지 물어봐.\n"
+    "- cuts의 appt_id는 '줄일 수 있는 약속'에 있는 것만, amount는 그 약속의 '줄일 수 있는 최대' 안에서 1,000원 단위. "
+    "그래도 남는 돈은 다시 짜기 화면에서 비상금으로 메운다고 알려 줘.\n"
     "지갑 상태와 선택지(JSON): {context}"
 )
 PLAN_SCHEMA = {
     "type": "object",
     "properties": {"reply": {"type": "string"},
                    "meal_days": {"type": "array", "items": {"type": "string"}},
-                   "save": {"type": "integer"}},
-    "required": ["reply", "meal_days", "save"],
+                   "save": {"type": "integer"},
+                   "cuts": {"type": "array", "items": {
+                       "type": "object",
+                       "properties": {"appt_id": {"type": "integer"}, "amount": {"type": "integer"}},
+                       "required": ["appt_id", "amount"], "additionalProperties": False}}},
+    "required": ["reply", "meal_days", "save", "cuts"],
     "additionalProperties": False,
 }
 
 
 def plan_reply(context, text, call=None):
-    # (답 문장, {"meal_days", "save"}, None) 또는 (None, None, "plan")
+    # (답 문장, {"meal_days", "save", "cuts"}, None) 또는 (None, None, "plan")
     model = os.getenv("OPENAI_MODEL") or DEFAULT_MODEL
     payload = {
         "model": model,
@@ -283,10 +292,11 @@ def plan_reply(context, text, call=None):
         data = json.loads(answer["choices"][0]["message"].get("content") or "{}")
         days = [str(d) for d in data.get("meal_days") or []]
         save = data.get("save") if isinstance(data.get("save"), int) and not isinstance(data.get("save"), bool) else 0
+        cuts = [{"appt_id": int(c["appt_id"]), "amount": int(c["amount"])} for c in data.get("cuts") or []]
     except urllib.error.HTTPError as e:
         print("계획 도우미 실패:", e.code, e.read()[:300])
         return None, None, "plan"
     except (urllib.error.URLError, TimeoutError, KeyError, IndexError, TypeError, AttributeError, ValueError) as e:
         print("계획 도우미 실패:", repr(e))
         return None, None, "plan"
-    return " ".join(str(data.get("reply") or "").split())[:300], {"meal_days": days, "save": save}, None
+    return " ".join(str(data.get("reply") or "").split())[:300], {"meal_days": days, "save": save, "cuts": cuts}, None

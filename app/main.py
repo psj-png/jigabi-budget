@@ -680,7 +680,7 @@ def cart_unplan(request: Request, item_id: int, today: str = Form(None)):
 
 
 @app.get("/replan")
-def replan_get(request: Request, today: str = None):
+def replan_get(request: Request, today: str = None, talked: str = None):
     user_id = current_user(request)
     if user_id is None:
         return to_start()
@@ -688,10 +688,11 @@ def replan_get(request: Request, today: str = None):
 
     conn = get_conn()
     try:
-        data = replan.make_replan(conn, user_id, now)
+        data = replan.make_replan(conn, user_id, now, propose_cuts=not talked)
     finally:
         conn.close()
-    return templates.TemplateResponse(request, "replan.html", {"r": data, "today_q": today, "now": now})
+    # ai_on: 줄이기 칸 아래 '지갑이랑 이야기해 보기' (R23)
+    return templates.TemplateResponse(request, "replan.html", {"r": data, "today_q": today, "now": now, "ai_on": ai.enabled(), "talked": bool(talked)})
 
 
 @app.post("/replan")
@@ -748,7 +749,7 @@ def split_save(request: Request, item: list[int] = Form(default=[]), today: str 
 
 # ---- 지갑이 채팅: 무신사 쇼핑 추천 (R21). 키가 없으면 없는 화면 ----
 @app.get("/chat")
-def chat_get(request: Request, today: str = None, mode: str = "shop"):
+def chat_get(request: Request, today: str = None, mode: str = "shop", text: str = ""):
     user_id = current_user(request)
     if user_id is None:
         return to_start()
@@ -763,7 +764,7 @@ def chat_get(request: Request, today: str = None, mode: str = "shop"):
         conn.close()
     return templates.TemplateResponse(request, "chat.html", {
         "chat": data, "today_q": today, "mode": mode,
-        "plan_starters": plan.STARTERS,
+        "plan_starters": plan.STARTERS, "prefill": text[:300],  # 다시 짜기에서 넘어오면 첫 말을 채워 둔다
     })
 
 

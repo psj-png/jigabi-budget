@@ -18,7 +18,8 @@
   {{ wallet(c.stage, 56) }}
   <div>
     <span class="jua-chip st-{{ c.stage }}">지금 지갑이 {{ c.stage }}</span>
-    {% if mode == "plan" and c.next_day %}<p>다음 돈 들어오는 날 {{ c.next_day.month }}/{{ c.next_day.day }}까지 {{ c.days_left }}일 · 지금 하루 여유 {{ "{:,}".format(c.daily or 0) }}원</p>
+    {% if mode == "plan" and c.short %}<p>산 것 때문에 이번 기간 <b>{{ "{:,}".format(c.short) }}원</b>이 모자라요. 줄여도 되는 약속이 있으면 말해 주세요.</p>
+    {% elif mode == "plan" and c.next_day %}<p>다음 돈 들어오는 날 {{ c.next_day.month }}/{{ c.next_day.day }}까지 {{ c.days_left }}일 · 지금 하루 여유 {{ "{:,}".format(c.daily or 0) }}원</p>
     {% elif mode != "plan" and c.budget %}<p>지금 든든을 지키려면 <b>{{ "{:,}".format(c.budget.keep_solid) }}원</b>까지예요. {{ "{:,}".format(c.budget.no_touch) }}원을 넘으면 최소 생활비를 건드려요.</p>{% endif %}
   </div>
 </section>
@@ -32,9 +33,9 @@
     {{ avatar() }}
     <div class="col">
       <span class="name">지갑이</span>
-      <div class="say">{% if mode == "plan" %}다음 돈 들어오는 날까지 어떻게 쓸지 같이 짜 볼까요? 도시락 날이나 모아 둘 돈을 골라 드리고, 적용하면 홈에도 바로 반영돼요.{% else %}찾고 싶은 옷이나 물건을 말해 주세요. 사고 싶은 상품 캡처를 올리면 비슷한 걸 찾아 줄게요.{% endif %}
+      <div class="say">{% if mode == "plan" and c.short %}모자란 돈을 같이 메워 볼까요? 줄여도 되는 약속(예: 술자리는 1차만)을 말해 주면, 도시락 날과 함께 골라 드릴게요.{% elif mode == "plan" %}다음 돈 들어오는 날까지 어떻게 쓸지 같이 짜 볼까요? 도시락 날이나 모아 둘 돈을 골라 드리고, 적용하면 홈에도 바로 반영돼요.{% else %}찾고 싶은 옷이나 물건을 말해 주세요. 사고 싶은 상품 캡처를 올리면 비슷한 걸 찾아 줄게요.{% endif %}
       {# 추천 질문: 누르면 그 문장이 바로 보내진다. 하루 한도를 다 쓴 날은 숨긴다 #}
-      {% if c.used < c.limit %}
+      {% if c.used < c.limit and not (mode == "plan" and c.short) %}
       <div class="starters">
         {% for s in (plan_starters if mode == "plan" else c.starters) %}
         <form method="post" action="/chat"><input type="hidden" name="mode" value="{{ mode }}">{% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}<button type="submit" class="starter-btn" name="text" value="{{ s }}">{{ s }}</button></form>
@@ -87,15 +88,21 @@
       <section class="plan-card">
         <b class="plan-title">이렇게 바꿔 볼까요?</b>
         {% if m.look and not m.applied %}
+        {% if m.look.before_short %}
+        <p class="plan-sum">모자란 돈 {{ "{:,}".format(m.look.before_short) }}원 <span class="arrow">→</span> <b>{{ "{:,}".format(m.look.after_short) }}원</b>{% if m.look.after_short %}<small>남는 돈은 다시 짜기에서 비상금으로 메워요</small>{% endif %}</p>
+        {% else %}
         <p class="plan-sum">하루 여유 {{ "{:,}".format(m.look.before) }}원 <span class="arrow">→</span> <b>{{ "{:,}".format(m.look.after) }}원</b> <span class="jua-chip st-{{ m.look.after_stage }}">{{ m.look.after_stage }}</span></p>
         {% endif %}
+        {% endif %}
         <ul class="plan-rows">
+          {% for cut in m.plan.cuts or [] %}<li><span>{{ cut.label }} {{ "{:,}".format(cut.amount) }} → {{ "{:,}".format(cut.amount - cut.cut) }}원</span><b>{{ "{:,}".format(cut.cut) }}원 줄여요</b></li>{% endfor %}
           {% for meal in m.plan.meals %}<li><span>{{ meal.label }} 점심 도시락</span><b>{{ "{:,}".format(meal.amount) }}원 아껴요</b></li>{% endfor %}
           {% if m.plan.save %}<li><span>{% if c.next_day %}{{ c.next_day.month }}/{{ c.next_day.day }}까지{% else %}다음 돈 들어오는 날까지{% endif %} 모아 두기</span><b>{{ "{:,}".format(m.plan.save) }}원 모아 둬요</b></li>{% endif %}
         </ul>
         {% if m.applied %}
-        <p class="done-pill">계획에 넣었어요 · 홈 '자세히 보기'에서 되돌릴 수 있어요</p>
-        <a class="btn btn-sub" href="/{{ q }}">홈에서 보기</a>
+        <p class="done-pill">계획에 넣었어요{% if m.plan.meals %} · 도시락은 홈 '자세히 보기'에서 되돌릴 수 있어요{% endif %}</p>
+        {% if c.short %}<a class="btn" href="/replan?talked=1{{ ('&today=' ~ today_q) if today_q else '' }}">다시 짜기로 돌아가기</a>
+        {% else %}<a class="btn btn-sub" href="/{{ q }}">홈에서 보기</a>{% endif %}
         {% elif m.look %}
         <form method="post" action="/plan/apply">
           {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
@@ -132,7 +139,7 @@
   {# 사진을 고르면 아이콘에 점이 보이게 form에 클래스만 바꾼다 #}
   <label class="shot-btn" aria-label="상품 캡처 올리기 (선택)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.5"/><path d="M4 17l5-5 4 4 3-3 4 4"/></svg><input type="file" name="shot" accept="image/png,image/jpeg,image/webp" onchange="this.form.classList.toggle('has-shot', this.files.length > 0)"></label>
   {% endif %}
-  <input id="text" type="text" name="text" maxlength="300" aria-label="{% if mode == 'plan' %}무엇이 궁금해요?{% else %}무엇을 찾을까요?{% endif %}" placeholder="{% if mode == 'plan' %}예: 알바비 날까지 어떻게 써야 해?{% else %}예: 이런 코트인데 15만 원 아래로{% endif %}">
+  <input id="text" type="text" name="text" maxlength="300" value="{{ prefill }}" aria-label="{% if mode == 'plan' %}무엇이 궁금해요?{% else %}무엇을 찾을까요?{% endif %}" placeholder="{% if mode == 'plan' %}예: 알바비 날까지 어떻게 써야 해?{% else %}예: 이런 코트인데 15만 원 아래로{% endif %}">
   <button type="submit" class="send" aria-label="보내기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
   <p class="wait small" hidden>{% if mode == "plan" %}지갑이가 계획을 짜고 있어요.{% else %}지갑이가 무신사를 찾고 있어요. 30초쯤 걸릴 수 있어요.{% endif %}</p>
   <p class="used small">오늘 {{ c.used }}/{{ c.limit }}번 물어봤어요</p>

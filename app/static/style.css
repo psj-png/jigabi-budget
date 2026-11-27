@@ -676,6 +676,12 @@ h1, h2, .big-money, .top h1, .page-title h1 { letter-spacing: -0.5px; }
 .mode-tabs .pick-on .at { color: var(--blue-dark); }
 
 
+/* 11/28 다시 짜기 → 채팅 (R23), 계획 카드의 모자란 돈 줄 */
+.talk-card { margin-top: 12px; text-decoration: none; }
+.talk-face { background: #FFFFFF; }
+.talk-face svg { width: 28px; height: 22px; fill: initial; stroke: none; }
+.plan-sum small { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+
 /* 11/28 채팅 맨 위: 지금 지갑이 단계 */
 .chat-status { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; }
 .chat-status .jg { flex: none; }

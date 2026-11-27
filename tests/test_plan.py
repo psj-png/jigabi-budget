@@ -5,7 +5,7 @@ from datetime import date
 import pymysql
 import pytest
 
-from app import calc, cart, plan, queries, setup, shop
+from app import calc, cart, plan, purchase, queries, setup, shop
 from app.db import get_conn
 from app.home import make_home
 
@@ -97,3 +97,42 @@ def test_실패하거나_바꿀_게_없을_때(conn, user):
     last = shop.make_chat(conn, user, TODAY)["messages"][-1]
     assert last["content"] == "지금처럼 쓰면 돼요." and last["plan"] is None
     assert plan.ask(conn, user, TODAY, "   ") == "empty"
+
+
+def answer_cuts(reply, days, cuts):
+    content = json.dumps({"reply": reply, "meal_days": days, "save": 30000, "cuts": cuts})
+    return lambda payload: {"choices": [{"message": {"content": content}}]}
+
+
+def test_모자라면_약속_줄이기도_고른다(conn, user):
+    # R23: 여유 돈보다 50,000원 비싼 물건을 사서 모자란 상태. 사용자가 "술자리는 1차만"이라고 하면
+    queries.insert_appointment(conn, user, date(2026, 11, 7), "동기 술자리", 30000, 0)
+    queries.insert_appointment(conn, user, date(2026, 11, 14), "동아리 회식", 60000, 0)
+    free = make_home(conn, user, TODAY)["free"]
+    queries.insert_wish_item(conn, user, "패딩", free + 50000, None)
+    item = [i for i in queries.get_items(conn, user) if i["name"] == "패딩"][0]
+    purchase.buy_now(conn, user, [item["item_id"]], TODAY)
+
+    opts, h = plan.options(conn, user, TODAY)
+    ids = {c["label"]: c["appt_id"] for c in opts["cuts"]}
+    assert opts["short"] == 50000 and opts["context"]["모자란 돈"] == 50000
+    assert [(c["label"], c["max"]) for c in opts["cuts"]] == [("11/7 동기 술자리", 10000), ("11/14 동아리 회식", 20000)]
+
+    # 모아 두기는 모자랄 때 0, 최대를 넘는 금액·없는 약속은 버린다
+    reply = "술자리는 1차만 가고 월·화 점심은 도시락으로 바꿔요."
+    call = answer_cuts(reply, ["2026-11-02", "2026-11-03"],
+                       [{"appt_id": ids["11/7 동기 술자리"], "amount": 15500}, {"appt_id": 999, "amount": 5000}])
+    assert plan.ask(conn, user, TODAY, "술자리는 1차만 갈게", call=call) is None
+    card = shop.make_chat(conn, user, TODAY, "plan")["messages"][-1]
+    assert card["plan"]["save"] == 0
+    assert [(c["label"], c["cut"]) for c in card["plan"]["cuts"]] == [("11/7 동기 술자리", 10000)]
+    assert (card["look"]["before_short"], card["look"]["after_short"]) == (50000, 50000 - 10000 - 12000)
+
+    assert plan.apply(conn, user, TODAY, card["id"])
+    amounts = {a["title"]: a["amount"] for a in queries.get_appointments(conn, user)}
+    assert amounts == {"동기 술자리": 20000, "동아리 회식": 60000}
+    assert make_home(conn, user, TODAY)["free"] == -28000  # 남은 28,000원은 다시 짜기에서 비상금으로
+    # 채팅에서 돌아온 다시 짜기는 약속을 또 줄이자고 하지 않는다 (비상금 0원이라 그대로 남는다)
+    from app import replan
+    r = replan.make_replan(conn, user, TODAY, propose_cuts=False)
+    assert [row["cut"] for row in r["rows"]] == [0, 0] and (r["borrow"], r["left"]) == (0, 28000)
