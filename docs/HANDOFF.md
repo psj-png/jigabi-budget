@@ -23,7 +23,7 @@ FastAPI + Jinja2(서버 렌더링, JS 최소) + MySQL 8, Docker.
 
 ## 코드 상태 (반영한 뒤)
 - 테스트: `pytest`, 111개 통과. DB 테스트는 jigabi_test를 schema+seed로 새로 만든다
-- AI는 `.env`의 `OPENAI_API_KEY`가 있을 때만 켜진다. `OPENAI_MODEL` 기본값은 gpt-5-mini(OpenAI가 '지원 중단 예정'으로 표시, 막히면 새 모델로 바꾼다). 키는 사용자가 `.env`에 직접 넣는다
+- AI는 `.env`의 `OPENAI_API_KEY`가 있을 때만 켜진다. `OPENAI_MODEL` 기본값은 gpt-6.1-terra다(gpt-5-mini는 2026-12-11 종료라 gpt-6.1-terra로 바꿨다). 키는 사용자가 `.env`에 직접 넣는다
 
 ## 화면 흐름 (38개)
 1. 처음: [예시로 먼저 해 보기](예시 사람, 2026-10-31 고정, 저장 안 함), [내 걸로 시작하기]

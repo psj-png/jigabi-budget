@@ -7,7 +7,7 @@ import urllib.error
 import urllib.request
 
 API_URL = "https://api.openai.com/v1/chat/completions"
-DEFAULT_MODEL = "gpt-5-mini"
+DEFAULT_MODEL = "gpt-6.1-terra"
 MAX_BYTES = 5 * 1024 * 1024  # 캡처는 5MB까지
 MAX_PRICE = 1_000_000_000
 PROMPT = (

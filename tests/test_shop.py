@@ -79,6 +79,9 @@ def test_요청_모양(monkeypatch):
     assert sent["include"] == ["web_search_call.action.sources"]
     assert sent["text"]["format"]["strict"] is True and "99,100원" in sent["instructions"]
     assert sent["input"][0]["content"][1]["image_url"].startswith("data:image/png;base64,")
+    assert "reasoning" not in sent  # 기본 모델(gpt-6.1-terra)에는 reasoning을 보내지 않는다
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-5-mini")  # gpt-5 계열만 reasoning을 받는다
+    ai.recommend("이런 코트", "", png, call=fake)
     assert sent["reasoning"] == {"effort": "low"}
     assert ai.recommend("코트", "", b"not image", call=fake) == (None, [], "type")
 

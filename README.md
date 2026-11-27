@@ -41,7 +41,7 @@ DB는 처음 실행할 때 `db/schema.sql`, `db/seed.sql`이 자동으로 들어
 
 ```
 OPENAI_API_KEY=키
-OPENAI_MODEL=gpt-5-mini
+OPENAI_MODEL=gpt-6.1-terra
 ```
 
 ## 기술 스택
