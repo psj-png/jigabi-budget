@@ -147,7 +147,7 @@
   {% if ask_none %}
   {# '가는 곳이 없어요'를 누르면 바로 지우지 않고 한 번 묻는다 #}
   <section class="card">
-    <p><b>{{ d.routines|map(attribute="name")|join(", ") }}</b>을(를) 빼고 계산할까요?</p>
+    <p><b>{{ d.routines|map(attribute="name")|join(", ") }}</b> 없이 계산할까요?</p>
     <p class="small">밥값·교통비(최소 생활비)가 0원이 돼요</p>
   </section>
   <button type="submit" class="btn" name="go" value="yes_no_routine" formnovalidate>네, 가는 곳 없어요</button>

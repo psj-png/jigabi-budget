@@ -92,10 +92,10 @@ def test_가는_곳이_없어요는_한_번_묻고_네를_눌러야_비운다():
     client = TestClient(app)
     page = to_step4(client)
     asked = press(client, page, "no_routine")
-    assert "학교" in text_of(asked) and "빼고 계산할까요?" in text_of(asked)
+    assert "학교" in text_of(asked) and "없이 계산할까요?" in text_of(asked)
     assert [r["name"] for r in draft_of(asked)["routines"]] == ["학교"]  # 아직 그대로
     kept = press(client, asked, "keep_routine")                           # 아니요
-    assert "빼고 계산할까요?" not in text_of(kept) and "이대로 할게요" in text_of(kept)
+    assert "없이 계산할까요?" not in text_of(kept) and "이대로 할게요" in text_of(kept)
     assert [r["name"] for r in draft_of(kept)["routines"]] == ["학교"]
     done = press(client, asked, "yes_no_routine")                         # 네
     assert draft_of(done)["routines"] == []
