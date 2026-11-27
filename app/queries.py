@@ -576,12 +576,12 @@ def get_balance_logs(conn, user_id, start, end):
 
 
 # ---- 지갑이 채팅 (R21) ----
-def insert_chat(conn, user_id, day, role, content, items_json=None):
+def insert_chat(conn, user_id, day, role, content, items_json=None, mode="shop", plan_json=None):
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO chat_messages (user_id, chat_day, role, content, items_json) "
-            "VALUES (%s, %s, %s, %s, %s)",
-            (user_id, day, role, content, items_json),
+            "INSERT INTO chat_messages (user_id, chat_day, role, mode, content, items_json, plan_json) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (user_id, day, role, mode, content, items_json, plan_json),
         )
     conn.commit()
 
@@ -590,7 +590,7 @@ def get_chat(conn, user_id, limit):
     # 최근 limit개를 오래된 것부터
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT message_id, role, content, items_json FROM chat_messages "
+            "SELECT message_id, role, mode, content, items_json, plan_json, applied FROM chat_messages "
             "WHERE user_id = %s ORDER BY message_id DESC LIMIT %s",
             (user_id, limit),
         )
@@ -606,3 +606,55 @@ def count_chat_today(conn, user_id, day):
             (user_id, day),
         )
         return cur.fetchone()["n"]
+
+
+# ---- 지갑이와 바꾼 계획 (R22) ----
+def get_plan_changes(conn, user_id):
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT change_id, day, kind, amount, note FROM plan_changes "
+            "WHERE user_id = %s ORDER BY day, change_id",
+            (user_id,),
+        )
+        return cur.fetchall()
+
+
+def add_plan_change(conn, user_id, day, kind, amount, note):
+    # commit 안 함 (plan.py가 묶는다). 도시락은 그날 한 번만, 모아 두기는 같은 기간이면 더한다
+    with conn.cursor() as cur:
+        cur.execute("SELECT change_id FROM plan_changes WHERE user_id = %s AND day = %s AND kind = %s",
+                    (user_id, day, kind))
+        row = cur.fetchone()
+        if row is None:
+            cur.execute(
+                "INSERT INTO plan_changes (user_id, day, kind, amount, note) VALUES (%s, %s, %s, %s, %s)",
+                (user_id, day, kind, amount, note),
+            )
+        elif kind == "save":
+            cur.execute("UPDATE plan_changes SET amount = amount + %s WHERE change_id = %s",
+                        (amount, row["change_id"]))
+
+
+def delete_plan_change(conn, user_id, change_id):
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM plan_changes WHERE change_id = %s AND user_id = %s", (change_id, user_id))
+        count = cur.rowcount
+    conn.commit()
+    return count
+
+
+def get_chat_message(conn, user_id, message_id):
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT message_id, mode, plan_json, applied FROM chat_messages "
+            "WHERE message_id = %s AND user_id = %s",
+            (message_id, user_id),
+        )
+        return cur.fetchone()
+
+
+def mark_applied(conn, user_id, message_id):
+    # commit 안 함
+    with conn.cursor() as cur:
+        cur.execute("UPDATE chat_messages SET applied = 1 WHERE message_id = %s AND user_id = %s",
+                    (message_id, user_id))

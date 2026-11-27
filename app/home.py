@@ -34,7 +34,7 @@ def ensure_period(conn, user_id, day):
     if before is None:
         return None
 
-    routines = queries.get_routines(conn, user_id)
+    routines = money_routines(conn, user_id)
     fixed = queries.get_fixed_costs(conn, user_id)
     appts = queries.get_appointments(conn, user_id)
     items = queries.get_items(conn, user_id)
@@ -94,7 +94,7 @@ def make_home(conn, user_id, today, before_night=False):
     days_left = (end - calc.first_day(today, logged)).days + 1  # 마지막 날에 기록했으면 0
     first = count_from  # 안 적은 날은 최소 생활비와 약속만큼 썼다고 보고 여유 돈에서 뺀다 (R10)
 
-    routines = queries.get_routines(conn, user_id)
+    routines = money_routines(conn, user_id)
     fixed = queries.get_fixed_costs(conn, user_id)
     appts = queries.get_appointments(conn, user_id)
     items = queries.get_items(conn, user_id)
@@ -111,6 +111,12 @@ def make_home(conn, user_id, today, before_night=False):
     # 계획한 물건은 사거나 취소할 때까지 빼니까 지난 날짜도 센다 (date.min부터)
     items_out = calc.purchases_sum(first, today, items) + calc.planned_sum(date.min, end, items)
     free = calc.free_money(balance, incomes_sum, fixed_sum, appt_sum, min_living, repay, items_out)
+    # 지갑이와 바꾼 계획 (R22): 이번 기간에 모아 두기로 한 돈은 여유 돈에서 뺀다 (도시락 날은 routines에 이미 들어 있다)
+    changes = [c for c in queries.get_plan_changes(conn, user_id)
+               if (c["kind"] == "save" and per["start_date"] <= c["day"] <= end)
+               or (c["kind"] == "meal" and today <= c["day"] <= end)]
+    saved = sum(c["amount"] for c in changes if c["kind"] == "save")
+    free -= saved
     daily = calc.daily_margin(free, days_left)
 
     # 사기로 한 날이 오늘이거나 지났는데 아직 안 산 물건
@@ -131,6 +137,8 @@ def make_home(conn, user_id, today, before_night=False):
         "min_living": min_living,
         "repay": repay,
         "items_out": items_out,
+        "saved": saved,
+        "changes": changes,
         "daily": daily,
         "stage": None,
         "budget": None,
@@ -144,7 +152,8 @@ def make_home(conn, user_id, today, before_night=False):
         "bar_from": today + timedelta(days=1) if logged and days_left > 0 else today,
         # 기간 끝 카드(18)와 가는 곳 안내(17)에 쓰는 값
         "period_start": per["start_date"],
-        "no_places": not any(r["end_date"] is None or r["end_date"] >= today for r in routines),
+        "no_places": not any(r["routine_id"] is not None and (r["end_date"] is None or r["end_date"] >= today)
+                             for r in routines),
     }
     # 남은 기간 막대 (R7-1): 안 적은 날이 있으면 그날들을 R10대로 메운 '오늘 아침 예상 잔액'부터 센다
     # 여유 돈·하루 여유는 그대로이고, 칸을 모두 빼면 여유 돈과 같다
@@ -166,3 +175,14 @@ def make_home(conn, user_id, today, before_night=False):
         home["today_appt"] = calc.appointments_sum(budget_day, budget_day, appts)
         home["stage_line"] = STAGE_LINES[home["stage"]]
     return home
+
+
+def money_routines(conn, user_id):
+    # 돈 계산용 가는 곳: 지갑이와 바꾼 도시락 날(R22)은 그날만 점심값 하나가 빠지는 줄로 더한다
+    routines = queries.get_routines(conn, user_id)
+    for c in queries.get_plan_changes(conn, user_id):
+        if c["kind"] == "meal":
+            routines.append({"routine_id": None, "weekdays": [c["day"].weekday()],
+                             "start_date": c["day"], "end_date": c["day"],
+                             "meals_out": -1, "meal_price": c["amount"], "round_trip_fare": 0})
+    return routines

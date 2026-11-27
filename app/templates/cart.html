@@ -199,6 +199,6 @@
 {% endif %}
 {# 지갑이 채팅 버튼 (R21): 키가 있을 때만 #}
 {% if ai_on %}
-<a class="fab" href="/chat{{ ("?today=" ~ today_q) if today_q else "" }}" aria-label="지갑이에게 물어보기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v10H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></a>
+<a class="fab" href="/chat?mode=shop{{ ("&today=" ~ today_q) if today_q else "" }}" aria-label="지갑이에게 물어보기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v10H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></a>
 {% endif %}
 {% endblock %}

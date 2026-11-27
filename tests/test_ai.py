@@ -47,7 +47,7 @@ def test_못_읽으면_직접_적게_한다():
         raise TimeoutError()
 
     assert ai.read_item(PNG, call=down) == (None, "fail")
-    assert set(ai.ERRORS) == {"type", "size", "fail", "none", "search"}
+    assert set(ai.ERRORS) == {"type", "size", "fail", "none", "search", "plan"}
 
 
 def test_읽은_값_정리():

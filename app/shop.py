@@ -1,5 +1,6 @@
 # 지갑이 채팅 (R21): 무신사에서 내 지갑에 맞는 상품을 찾아 준다
 import json
+from datetime import timedelta
 
 from app import ai, calc, queries
 from app.home import make_home
@@ -34,10 +35,19 @@ def make_chat(conn, user_id, today):
             it["chip"] = None
             if it.get("price") and h["ready"] and h["daily"] is not None:
                 it["chip"] = calc.preview(h["free"], h["days_left"], it["price"], comfort)[1]
-        messages.append({"role": m["role"], "content": m["content"], "items": items})
+        proposal = json.loads(m["plan_json"]) if m.get("plan_json") else None
+        look = None
+        if proposal and h["ready"] and h["daily"] is not None and not m.get("applied"):
+            from app import plan  # plan이 shop을 불러서 여기서만 부른다
+            look = plan.preview(h, proposal, comfort)
+        messages.append({"id": m["message_id"], "role": m["role"], "mode": m.get("mode", "shop"),
+                         "content": m["content"], "items": items, "plan": proposal, "look": look,
+                         "applied": bool(m.get("applied"))})
     return {"messages": messages, "budget": budget(h, comfort) if h["ready"] else None,
             "used": queries.count_chat_today(conn, user_id, today), "limit": DAILY_LIMIT,
-            "starters": STARTERS, "stage": h.get("stage")}
+            "starters": STARTERS, "stage": h.get("stage"),
+            "next_day": h["end"] + timedelta(days=1) if h["ready"] else None,
+            "days_left": h.get("days_left"), "daily": h.get("daily")}
 
 
 def ask(conn, user_id, today, text, image=None, call=None):

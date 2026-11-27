@@ -2,7 +2,7 @@
 from datetime import timedelta
 
 from app import calc, queries
-from app.home import ensure_period, make_home
+from app.home import ensure_period, make_home, money_routines
 
 
 def _blocked(conn, user_id, today, day):
@@ -104,7 +104,7 @@ def guess_balance(conn, user_id, day, spent):
     usual = 0
     last_missed = day - timedelta(days=1)
     if ctx["start"] <= last_missed:
-        routines = queries.get_routines(conn, user_id)
+        routines = money_routines(conn, user_id)
         appts = queries.get_appointments(conn, user_id)
         usual = (calc.min_living(ctx["start"], last_missed, routines)
                  + calc.appointments_sum(ctx["start"], last_missed, appts))

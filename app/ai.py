@@ -31,6 +31,7 @@ ERRORS = {
     "fail": "캡처를 읽지 못했어요. 이름과 가격을 직접 적어 주세요",
     "none": "캡처에서 상품 이름이나 가격을 찾지 못했어요. 직접 적어 주세요",
     "search": "지금은 무신사를 찾지 못했어요. 잠시 뒤에 다시 물어봐 주세요",
+    "plan": "지금은 계획을 짜지 못했어요. 잠시 뒤에 다시 물어봐 주세요",
 }
 
 
@@ -241,3 +242,51 @@ def recommend(text, budget_line, image=None, call=None):
         print("쇼핑 추천 실패:", repr(e))
         return None, [], "search"
     return reply, picks, None
+
+
+# ---- 계획 도우미 (R22): 다음 돈 들어오는 날까지 어떻게 쓸지. 앱이 계산한 선택지 안에서만 고른다 ----
+PLAN_PROMPT = (
+    "너는 대학생 가계부 앱 '지갑이'의 계획 도우미야. 다음 돈 들어오는 날까지 어떻게 쓸지 물으면, "
+    "아래 지갑 상태를 보고 두세 문장으로 친근한 '해요'체로 답해.\n"
+    "- 계획을 바꾸려면 선택지 안에서만 골라. meal_days는 '도시락으로 바꿀 수 있는 날'에 있는 날짜(YYYY-MM-DD)만, "
+    "save는 모아 둘 돈으로 0부터 '모아 둘 수 있는 최대'까지 1,000원 단위.\n"
+    "- 바꾼 뒤의 하루 여유 같은 새 숫자는 말하지 마. 앱이 다시 계산해서 보여 줘. 상태에 있는 숫자는 써도 돼.\n"
+    "- 끼니를 거르라는 말은 하지 마. 밖에서 사 먹을 점심을 도시락으로 바꾸는 것만 제안해.\n"
+    "- 다가오는 약속이 있으면 그 전후로 어떻게 쓰면 좋을지 짧게 말해 줘.\n"
+    "- 바꿀 필요가 없으면 meal_days는 비우고 save는 0.\n"
+    "지갑 상태와 선택지(JSON): {context}"
+)
+PLAN_SCHEMA = {
+    "type": "object",
+    "properties": {"reply": {"type": "string"},
+                   "meal_days": {"type": "array", "items": {"type": "string"}},
+                   "save": {"type": "integer"}},
+    "required": ["reply", "meal_days", "save"],
+    "additionalProperties": False,
+}
+
+
+def plan_reply(context, text, call=None):
+    # (답 문장, {"meal_days", "save"}, None) 또는 (None, None, "plan")
+    model = os.getenv("OPENAI_MODEL") or DEFAULT_MODEL
+    payload = {
+        "model": model,
+        "messages": [{"role": "system", "content": PLAN_PROMPT.format(context=json.dumps(context, ensure_ascii=False))},
+                     {"role": "user", "content": text}],
+        "response_format": {"type": "json_schema",
+                            "json_schema": {"name": "plan", "strict": True, "schema": PLAN_SCHEMA}},
+    }
+    if model.startswith("gpt-5"):
+        payload["reasoning_effort"] = "low"
+    try:
+        answer = (call or post)(payload)
+        data = json.loads(answer["choices"][0]["message"].get("content") or "{}")
+        days = [str(d) for d in data.get("meal_days") or []]
+        save = data.get("save") if isinstance(data.get("save"), int) and not isinstance(data.get("save"), bool) else 0
+    except urllib.error.HTTPError as e:
+        print("계획 도우미 실패:", e.code, e.read()[:300])
+        return None, None, "plan"
+    except (urllib.error.URLError, TimeoutError, KeyError, IndexError, TypeError, AttributeError, ValueError) as e:
+        print("계획 도우미 실패:", repr(e))
+        return None, None, "plan"
+    return " ".join(str(data.get("reply") or "").split())[:300], {"meal_days": days, "save": save}, None

@@ -57,6 +57,7 @@
   </div>
   <div class="label">{% if h.logged %}내일{% else %}오늘{% endif %} 쓸 수 있는 돈</div>
   <div class="big-money">{{ "{:,}".format(h.budget) }}원</div>
+  {% if h.changes %}<p class="small plan-note">지갑이와 바꾼 계획 {{ h.changes|length }}개가 반영돼 있어요</p>{% endif %}
   {% endif %}
 
   {# 12 자세히: 화면 이동 없이 그 자리에서 펼친다 #}
@@ -68,6 +69,7 @@
   ] %}
   {% if h.items_out != 0 %}{% set parts = parts + [("산 것·살 계획", h.items_out, "#94A3B8")] %}{% endif %}
   {% if h.repay != 0 %}{% set parts = parts + [("비상금 상환", h.repay, "#64748B")] %}{% endif %}
+  {% if h.saved %}{% set parts = parts + [("모아 둘 돈", h.saved, "#0B7A4B")] %}{% endif %}
   <details class="more">
     <summary>자세히 보기</summary>
     {% if h.budget is not none %}
@@ -92,6 +94,19 @@
       {% endfor %}
     </ul>
     <p class="note">사고 싶은 건 '여유 돈'에서만 나가요.</p>
+    {# 지갑이와 바꾼 계획 (R22): 여기서 하나씩 되돌릴 수 있다 #}
+    {% if h.changes %}
+    <div class="sub-title">지갑이와 바꾼 계획</div>
+    <ul class="rows">
+      {% for ch in h.changes %}
+      <li class="row">
+        <span class="row-main">{{ ch.note }}</span>
+        <span class="row-end"><b>{% if ch.kind == "meal" %}+{% else %}−{% endif %}{{ "{:,}".format(ch.amount) }}원</b></span>
+        <form method="post" action="/plan/changes/{{ ch.change_id }}/delete">{% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}<button type="submit" class="btn-small">되돌리기</button></form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
   </details>
 </section>
 
@@ -185,6 +200,6 @@
 {% endif %}
 {# 지갑이 채팅 버튼 (R21): 키가 있을 때만 #}
 {% if ai_on %}
-<a class="fab" href="/chat{{ ("?today=" ~ today_q) if today_q else "" }}" aria-label="지갑이에게 물어보기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v10H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></a>
+<a class="fab" href="/chat?mode=plan{{ ("&today=" ~ today_q) if today_q else "" }}" aria-label="지갑이에게 물어보기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v10H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></a>
 {% endif %}
 {% endblock %}

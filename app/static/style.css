@@ -446,3 +446,11 @@ details.more[open] > summary { margin-bottom: 8px; }
 .chat-form { position: sticky; bottom: 0; margin-top: 12px; padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--bg); }
 .chat-form input[type="text"] { display: block; width: 100%; box-sizing: border-box; min-height: 48px; margin: 4px 0 10px; padding: 0 12px; border: 1px solid var(--border); border-radius: 12px; background: #FFFFFF; font: inherit; font-size: 16px; }
 .chat-form .small { margin: 6px 0 0; }
+
+/* 계획 도우미 (R22) */
+.mode-tabs { margin: 0 0 12px; }
+.plan-card b { font-size: 15px; }
+.plan-card .rows { margin: 6px 0 8px; }
+.plan-look { margin: 4px 0 10px; font-size: 15px; }
+.plan-look .arrow { color: var(--blue); font-weight: 700; }
+.plan-note { margin: 4px 0 0; color: #0B7A4B; }

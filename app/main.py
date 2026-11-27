@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import balance as balance_page
-from app import ai, calc, cart, purchase, queries, replan, settings, setup, shop, split
+from app import ai, calc, cart, plan, purchase, queries, replan, settings, setup, shop, split
 from app.db import get_conn
 from app.home import make_home
 
@@ -52,6 +52,10 @@ def page_extras(request):
         extras["toast"] = {"text": "준비 끝! 기록은 이 기기에 저장돼요", "undo": None, "ids": [], "back": back}
     elif kind == "added":
         extras["toast"] = {"text": "장바구니에 담았어요", "undo": None, "ids": [], "back": back}
+    elif kind == "planned":
+        extras["toast"] = {"text": "계획을 바꿨어요. 홈과 장바구니에도 반영돼요", "undo": None, "ids": [], "back": back}
+    elif kind == "undone":
+        extras["toast"] = {"text": "계획을 되돌렸어요", "undo": None, "ids": [], "back": back}
     return extras
 
 
@@ -701,7 +705,7 @@ def split_save(request: Request, item: list[int] = Form(default=[]), today: str 
 
 # ---- 지갑이 채팅: 무신사 쇼핑 추천 (R21). 키가 없으면 없는 화면 ----
 @app.get("/chat")
-def chat_get(request: Request, today: str = None):
+def chat_get(request: Request, today: str = None, mode: str = "shop"):
     user_id = current_user(request)
     if user_id is None:
         return to_start()
@@ -713,7 +717,10 @@ def chat_get(request: Request, today: str = None):
         data = shop.make_chat(conn, user_id, now)
     finally:
         conn.close()
-    return templates.TemplateResponse(request, "chat.html", {"chat": data, "today_q": today})
+    return templates.TemplateResponse(request, "chat.html", {
+        "chat": data, "today_q": today, "mode": "plan" if mode == "plan" else "shop",
+        "plan_starters": plan.STARTERS,
+    })
 
 
 @app.post("/chat")
@@ -733,12 +740,16 @@ async def chat_post(request: Request):
     shot = form.get("shot")
     if shot is not None and hasattr(shot, "read"):
         image = await shot.read(ai.MAX_BYTES + 1) or None
+    mode = "plan" if form.get("mode") == "plan" else "shop"
     conn = get_conn()
     try:
-        shop.ask(conn, user_id, now, form.get("text"), image)
+        if mode == "plan":
+            plan.ask(conn, user_id, now, form.get("text"))
+        else:
+            shop.ask(conn, user_id, now, form.get("text"), image)
     finally:
         conn.close()
-    return RedirectResponse(url_with("/chat", today) + "#last", status_code=303)
+    return RedirectResponse(url_with("/chat", today, mode=mode) + "#last", status_code=303)
 
 
 @app.post("/chat/add")
@@ -757,6 +768,43 @@ def chat_add(request: Request, name: str = Form(min_length=1, max_length=60), pr
     finally:
         conn.close()
     return RedirectResponse(url_with("/chat", today, toast="added") + "#last", status_code=303)
+
+
+@app.post("/plan/apply")
+def plan_apply(request: Request, message_id: int = Form(), today: str = Form(None)):
+    # 계획 도우미 제안의 [이대로 적용] (R22): 저장하면 모든 화면이 같은 계산으로 따라 바뀐다
+    user_id = current_user(request)
+    if user_id is None:
+        return to_start()
+    stop = demo_stop(request)
+    if stop:
+        return stop
+    now = pick_now(request, today)
+    conn = get_conn()
+    try:
+        done = plan.apply(conn, user_id, now, message_id)
+    finally:
+        conn.close()
+    if not done:
+        raise HTTPException(status_code=400, detail="적용할 수 있는 제안이 없어요")
+    return RedirectResponse(url_with("/chat", today, mode="plan", toast="planned") + "#last", status_code=303)
+
+
+@app.post("/plan/changes/{change_id}/delete")
+def plan_undo(request: Request, change_id: int, today: str = Form(None)):
+    # 홈 '지갑이와 바꾼 계획'의 [되돌리기]
+    user_id = current_user(request)
+    if user_id is None:
+        return to_start()
+    stop = demo_stop(request)
+    if stop:
+        return stop
+    conn = get_conn()
+    try:
+        queries.delete_plan_change(conn, user_id, change_id)
+    finally:
+        conn.close()
+    return RedirectResponse(url_with("/", today, toast="undone"), status_code=303)
 
 
 # ---- 설정 (흐름 6) ----

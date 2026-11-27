@@ -127,9 +127,25 @@ CREATE TABLE chat_messages (
     user_id INT NOT NULL,
     chat_day DATE NOT NULL,
     role ENUM('user', 'assistant') NOT NULL,
+    mode ENUM('shop', 'plan') NOT NULL DEFAULT 'shop',  -- 무신사에서 찾기 / 계획 짜기 (R22)
     content VARCHAR(500) NOT NULL,
     items_json JSON NULL,  -- 지갑이가 고른 상품 카드 (이름·가격·링크·이유)
+    plan_json JSON NULL,   -- 계획 도우미 제안 (도시락 날, 모아 두기)
+    applied TINYINT(1) NOT NULL DEFAULT 0,  -- 제안을 [이대로 적용] 했는지
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_chat_user_day (user_id, chat_day),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- 지갑이와 바꾼 계획 (R22): 도시락 날은 그날 점심값 하나가 최소 생활비에서 빠지고, 모아 두기는 그 기간 여유 돈에서 빠진다
+CREATE TABLE plan_changes (
+    change_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    day DATE NOT NULL,                  -- 도시락: 그날, 모아 두기: 그 기간의 끝 날
+    kind ENUM('meal', 'save') NOT NULL,
+    amount INT NOT NULL,                -- 도시락: 아끼는 점심값, 모아 두기: 남겨 둘 돈
+    note VARCHAR(60) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_plan_day_kind (user_id, day, kind),
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );

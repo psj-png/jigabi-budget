@@ -2,13 +2,13 @@
 from datetime import timedelta
 
 from app import calc, queries, setup
-from app.home import ensure_period, make_home
+from app.home import ensure_period, make_home, money_routines
 
 
 def make_settings(conn, user_id, today):
     # 설정 첫 화면 (24): 맨 위 이번 기간 최소 생활비와 항목별 한 줄 요약
     per = ensure_period(conn, user_id, today)
-    routines = queries.get_routines(conn, user_id)
+    routines = money_routines(conn, user_id)
     places = [r for r in queries.list_routines(conn, user_id)
               if r["end_date"] is None or r["end_date"] >= today]
     return {"per": per, "user": queries.get_user(conn, user_id),
