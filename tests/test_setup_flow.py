@@ -111,3 +111,12 @@ def test_고치는_화면의_뒤로는_고친_내용을_담고_요약으로():
     assert "이대로 할게요" in text and "수업" in text and "2,500원" in text
     routines = draft_of(page)["routines"]
     assert [(r["name"], r["fare"]) for r in routines] == [("수업", "2500")]
+
+
+def test_가는_곳_더하기_버튼은_하나():
+    client = TestClient(app)
+    page = to_step4(client)
+    assert "알바도 있어요" not in text_of(page) and "가는 곳 더하기" in text_of(page)
+    added = press(client, page, "add_routine")
+    assert [r["name"] for r in draft_of(added)["routines"]] == ["학교", ""]
+    assert 'placeholder="예: 알바, 학원"' in added

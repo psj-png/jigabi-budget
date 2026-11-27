@@ -177,7 +177,6 @@ def render_setup(request, d, step, today, error=None, editing=False, picking=Fal
         "today_q": today, "error": error, "editing": editing, "look": look, "picking": picking, "ask_none": ask_none,
         "examples": setup.example_left(d), "example_incomes": setup.EXAMPLE_INCOMES,
         "example_fixed": setup.EXAMPLE_FIXED, "weekday_text": setup.weekday_text,
-        "has_alba": any(r.get("name") == "알바" for r in d["routines"]),
         "rows_max": {"incomes": setup.INCOME_ROWS, "fixed": setup.FIXED_ROWS,
                      "routines": setup.ROUTINE_ROWS},
     })

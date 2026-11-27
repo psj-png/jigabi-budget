@@ -111,7 +111,7 @@
   {% set i = loop.index0 %}
   <section class="card">
     <div class="row-title">
-      <input class="plain-input" type="text" name="r_name" value="{{ r.name }}" maxlength="20" placeholder="예: 학교" aria-label="이름">
+      <input class="plain-input" type="text" name="r_name" value="{{ r.name }}" maxlength="20" placeholder="예: 알바, 학원" aria-label="이름">
       <button type="submit" class="btn-small" name="go" value="del_routine:{{ i }}" formnovalidate>빼기</button>
     </div>
     <div class="wd-row">
@@ -160,7 +160,6 @@
   <section class="card"><p class="small">가는 곳이 없어요. 최소 생활비를 0원으로 계산해요.</p></section>
   <button type="submit" class="btn" name="go" value="next">다음</button>
   {% endif %}
-  {% if not has_alba and d.routines|length < rows_max.routines %}<button type="submit" class="link-btn" name="go" value="add_alba" formnovalidate>+ 알바도 있어요</button>{% endif %}
   {% if d.routines %}<button type="submit" class="link-btn" name="go" value="no_routine" formnovalidate>가는 곳이 없어요</button>{% endif %}
   {% endif %}
   {% endif %}

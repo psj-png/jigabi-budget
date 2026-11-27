@@ -178,8 +178,6 @@ EXAMPLE_INCOMES = [{"name": "알바비", "day": "25", "amount": "500000"},
 EXAMPLE_FIXED = [{"name": "통신비", "day": "5", "amount": "30000"}]
 SCHOOL = {"name": "학교", "wds": ["0", "1", "2", "3", "4"], "meals": "2", "price": "6000",
           "fare": "3100", "start": "", "end": ""}
-ALBA = {"name": "알바", "wds": ["5", "6"], "meals": "0", "price": "0", "fare": "3100",
-        "start": "", "end": ""}
 WEEKDAYS = "월화수목금토일"
 
 
@@ -288,8 +286,6 @@ def apply_op(d, op):
         del d["fixed"][index]
     elif kind == "no_fixed":
         d["fixed"] = []
-    elif kind == "add_alba" and len(d["routines"]) < ROUTINE_ROWS:
-        d["routines"].append(dict(ALBA, wds=list(ALBA["wds"])))
     elif kind == "add_routine" and len(d["routines"]) < ROUTINE_ROWS:
         d["routines"].append({"name": "", "wds": [], "meals": "0", "price": "0", "fare": "0",
                               "start": "", "end": ""})
