@@ -62,6 +62,7 @@ def page_extras(request):
 
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates", context_processors=[page_extras])
+templates.env.globals["period_text"] = setup.period_text  # 설정 화면의 기간 시작 날짜 범위
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
@@ -837,7 +838,7 @@ def plan_undo(request: Request, change_id: int, today: str = Form(None)):
 
 # ---- 설정 (흐름 6) ----
 MONEY_KINDS = {"incomes": "돈 들어오는 날", "fixed": "고정비"}
-NO_MAIN_DELETE = "기간 기준인 돈은 뺄 수 없어요. 다른 걸 기간 기준으로 고른 뒤 빼 주세요"
+NO_MAIN_DELETE = "기간 시작인 돈은 뺄 수 없어요. 다른 걸 기간 시작으로 고른 뒤 빼 주세요"
 
 
 def saved(path, today):

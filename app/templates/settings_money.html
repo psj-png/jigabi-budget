@@ -9,14 +9,14 @@
   <h1>{{ title }}</h1>
 </div>
 
-<p class="top-sub">{% if kind == "incomes" %}기간 기준을 바꾸면 지금 기간은 그대로 두고, 다음 기간부터 새 날짜로 끊어요.{% else %}매달 정해진 날 나가는 돈이에요. 고치면 바로 계산에 들어가요.{% endif %}</p>
+<p class="top-sub">{% if kind == "incomes" %}기간 시작을 바꾸면 지금 기간은 그대로 두고, 다음 기간부터 새 날짜로 끊어요.{% else %}매달 정해진 날 나가는 돈이에요. 고치면 바로 계산에 들어가요.{% endif %}</p>
 {% if error %}<div class="warn">{{ error }}</div>{% endif %}
 
 <section class="card">
   {% for r in rows %}
   {% set rid = r.income_id if kind == "incomes" else r.fixed_id %}
   <details class="edit-row">
-    <summary><span><b>{{ r.name }}</b><small>매달 {{ r.day_of_month }}일{% if r.is_main %} · 기간 기준{% endif %}</small></span><b>{{ "{:,}".format(r.amount) }}원</b></summary>
+    <summary><span><b>{{ r.name }}</b><small>{% if r.is_main %}{{ period_text(r.day_of_month) }} · 기간 시작{% else %}매달 {{ r.day_of_month }}일{% endif %}</small></span><b>{{ "{:,}".format(r.amount) }}원</b></summary>
     <form method="post" action="/settings/money/{{ kind }}/{{ rid }}">
       {% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}
       <label class="field">이름<input type="text" name="name" value="{{ r.name }}" maxlength="20" required></label>
@@ -28,7 +28,7 @@
     </form>
     <div class="two-btns">
       {% if kind == "incomes" and not r.is_main %}
-      <form method="post" action="/settings/money/incomes/{{ rid }}/main">{% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}<button type="submit" class="btn btn-sub">기간 기준으로</button></form>
+      <form method="post" action="/settings/money/incomes/{{ rid }}/main">{% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}<button type="submit" class="btn btn-sub">기간 시작으로</button></form>
       {% endif %}
       {% if not r.is_main %}
       <form method="post" action="/settings/money/{{ kind }}/{{ rid }}/delete">{% if today_q %}<input type="hidden" name="today" value="{{ today_q }}">{% endif %}<button type="submit" class="btn btn-danger">빼기</button></form>
