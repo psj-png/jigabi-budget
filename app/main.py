@@ -165,7 +165,7 @@ def set_login_cookie(response, public_id):
 
 
 # ---- 첫 설정 (흐름 2): 다섯 단계, 칸은 예시로 채워 두고 고치게 한다 ----
-def render_setup(request, d, step, today, error=None, editing=False, picking=False, ask_none=False):
+def render_setup(request, d, step, today, error=None, editing=False, picking=False, ask_del=None):
     look = None
     if step == setup.LAST_STEP:
         try:
@@ -174,7 +174,7 @@ def render_setup(request, d, step, today, error=None, editing=False, picking=Fal
             return render_setup(request, d, 1, today, str(e))
     return templates.TemplateResponse(request, "setup_step.html", {
         "step": step, "d": d, "draft_json": json.dumps(d, ensure_ascii=False),
-        "today_q": today, "error": error, "editing": editing, "look": look, "picking": picking, "ask_none": ask_none,
+        "today_q": today, "error": error, "editing": editing, "look": look, "picking": picking, "ask_del": ask_del,
         "examples": setup.example_left(d), "example_incomes": setup.EXAMPLE_INCOMES,
         "example_fixed": setup.EXAMPLE_FIXED, "weekday_text": setup.weekday_text,
         "rows_max": {"incomes": setup.INCOME_ROWS, "fixed": setup.FIXED_ROWS,
@@ -218,17 +218,11 @@ async def setup_step(request: Request):
         return render_setup(request, d, 4, today, editing=True)
     if go == "pick_main":
         return render_setup(request, d, setup.LAST_STEP, today, picking=True)
-    if go == "no_fixed":
-        setup.apply_op(d, go)
-        return render_setup(request, d, 4, today)
-    if go == "no_routine":
-        # 바로 지우지 않고 4/5에서 한 번 묻는다
-        return render_setup(request, d, 4, today, ask_none=True)
+    if go.startswith("ask_del:") and go[8:].isdigit() and int(go[8:]) < len(d["routines"]):
+        # 4/5 가는 곳 카드의 [−]: 바로 지우지 않고 한 번 묻는다
+        return render_setup(request, d, 4, today, ask_del=int(go[8:]))
     if go == "keep_routine":
         return render_setup(request, d, 4, today)
-    if go == "yes_no_routine":
-        setup.apply_op(d, "no_routine")
-        return render_setup(request, d, setup.LAST_STEP, today)
     if go != "next":
         # 줄 더하기·빼기는 같은 단계에 머문다
         setup.apply_op(d, go)

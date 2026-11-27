@@ -124,32 +124,32 @@
   {% else %}
   <section class="card"><p class="small">가는 곳이 없어요. 최소 생활비를 0원으로 계산해요.</p></section>
   {% endfor %}
-  {% if d.routines|length < rows_max.routines %}<button type="submit" class="link-btn" name="go" value="add_routine" formnovalidate>+ 가는 곳 더하기</button>{% endif %}
-  <button type="submit" class="btn" name="go" value="next">다음</button>
+  {% if d.routines|length < rows_max.routines %}<button type="submit" class="btn btn-sub" name="go" value="add_routine" formnovalidate>장소 추가하기</button>{% endif %}
+  <button type="submit" class="btn gap-top" name="go" value="next">다음</button>
   {% else %}
   {% for r in d.routines %}
-  {# 카드를 누르면 고치는 화면 (설정 목록과 같은 > 표시) #}
-  <button type="submit" class="card place-card place-btn" name="go" value="edit" formnovalidate>
-    <span><b>{{ r.name }}</b><small>{{ weekday_text(r.wds) }} · {% if r.meals|int > 0 %}{{ r.meals }}끼 {{ "{:,}".format(r.price|int) }}원{% else %}밖에서 안 먹어요{% endif %} · 왕복 {{ "{:,}".format(r.fare|int) }}원</small></span>
-  </button>
+  {% set i = loop.index0 %}
+  {# 카드를 누르면 고치는 화면 (설정 목록과 같은 > 표시), 오른쪽 [−]는 이 장소만 지운다 #}
+  <div class="card place-card">
+    <button type="submit" class="place-btn" name="go" value="edit" formnovalidate>
+      <span><b>{{ r.name }}</b><small>{{ weekday_text(r.wds) }} · {% if r.meals|int > 0 %}{{ r.meals }}끼 {{ "{:,}".format(r.price|int) }}원{% else %}밖에서 안 먹어요{% endif %} · 왕복 {{ "{:,}".format(r.fare|int) }}원</small></span>
+    </button>
+    <button type="submit" class="btn-small sq" name="go" value="ask_del:{{ i }}" formnovalidate aria-label="{{ r.name }} 지우기">−</button>
+  </div>
   {% endfor %}
-  {% if ask_none %}
-  {# '가는 곳이 없어요'를 누르면 바로 지우지 않고 한 번 묻는다 #}
+  {% if ask_del is not none %}
+  {# [−]를 누르면 바로 지우지 않고 한 번 묻는다 #}
+  {% set r = d.routines[ask_del] %}
   <section class="card">
-    <p><b>{{ d.routines|map(attribute="name")|join(", ") }}</b> 없이 계산할까요?</p>
-    <p class="small">밥값·교통비(최소 생활비)가 0원이 돼요</p>
+    <p><b>{{ r.name }}</b> 지울까요?</p>
+    <p class="small">{% if d.routines|length == 1 %}가는 곳이 없으면 밥값·교통비(최소 생활비)가 0원이 돼요{% else %}{{ r.name }} 가는 날의 밥값·교통비가 빠져요{% endif %}</p>
   </section>
-  <button type="submit" class="btn" name="go" value="yes_no_routine" formnovalidate>네, 가는 곳 없어요</button>
-  <button type="submit" class="btn btn-sub" name="go" value="keep_routine" formnovalidate>아니요</button>
+  <button type="submit" class="btn" name="go" value="del_routine:{{ ask_del }}" formnovalidate>네, 지울게요</button>
+  <button type="submit" class="btn btn-sub gap-top" name="go" value="keep_routine" formnovalidate>아니요</button>
   {% else %}
-  {% if d.routines|length < rows_max.routines %}<button type="submit" class="link-btn" name="go" value="add_routine" formnovalidate>+ 가는 곳 더하기</button>{% endif %}
-  {% if d.routines %}
-  <button type="submit" class="btn" name="go" value="next">이대로 할게요</button>
-  {% else %}
-  <section class="card"><p class="small">가는 곳이 없어요. 최소 생활비를 0원으로 계산해요.</p></section>
-  <button type="submit" class="btn" name="go" value="next">다음</button>
-  {% endif %}
-  {% if d.routines %}<button type="submit" class="link-btn" name="go" value="no_routine" formnovalidate>가는 곳이 없어요</button>{% endif %}
+  {% if not d.routines %}<section class="card"><p class="small">가는 곳이 없어요. 최소 생활비를 0원으로 계산해요.</p></section>{% endif %}
+  {% if d.routines|length < rows_max.routines %}<button type="submit" class="btn btn-sub" name="go" value="add_routine" formnovalidate>장소 추가하기</button>{% endif %}
+  <button type="submit" class="btn gap-top" name="go" value="next">{% if d.routines %}이대로 할게요{% else %}다음{% endif %}</button>
   {% endif %}
   {% endif %}
 

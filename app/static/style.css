@@ -523,3 +523,7 @@ h1, h2, .big-money, .top h1, .page-title h1 { letter-spacing: -0.5px; }
 .btn-small.sq { flex: none; width: 44px; padding: 0; font-size: 22px; font-weight: 500; line-height: 1; }
 .add-sq { display: flex; width: 100%; font-size: 22px; font-weight: 500; }
 
+/* 11/28 4/5 가는 곳 카드: 누르면 고치기, 오른쪽 [−]는 이 장소만 지우기 */
+.place-card { display: flex; align-items: center; gap: 8px; padding-top: 8px; padding-bottom: 8px; }
+.place-card .place-btn { flex: 1; min-width: 0; width: auto; padding: 0; background: none; }
+

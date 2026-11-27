@@ -88,18 +88,18 @@ def test_고치는_화면을_거쳐도_가는_곳이_남는다():
     assert "30,000원" in text             # 오늘 쓸 수 있는 돈
 
 
-def test_가는_곳이_없어요는_한_번_묻고_네를_눌러야_비운다():
+def test_가는_곳_빼기는_한_번_묻고_네를_눌러야_지운다():
     client = TestClient(app)
     page = to_step4(client)
-    asked = press(client, page, "no_routine")
-    assert "학교" in text_of(asked) and "없이 계산할까요?" in text_of(asked)
+    asked = press(client, page, "ask_del:0")
+    assert "학교 지울까요?" in text_of(asked) and "0원이 돼요" in text_of(asked)
     assert [r["name"] for r in draft_of(asked)["routines"]] == ["학교"]  # 아직 그대로
     kept = press(client, asked, "keep_routine")                           # 아니요
-    assert "없이 계산할까요?" not in text_of(kept) and "이대로 할게요" in text_of(kept)
+    assert "지울까요?" not in text_of(kept) and "이대로 할게요" in text_of(kept)
     assert [r["name"] for r in draft_of(kept)["routines"]] == ["학교"]
-    done = press(client, asked, "yes_no_routine")                         # 네
+    done = press(client, asked, "del_routine:0")                          # 네
     assert draft_of(done)["routines"] == []
-    assert "이렇게 계산할게요" in text_of(done)
+    assert "가는 곳이 없어요" in text_of(done) and "장소 추가하기" in text_of(done)
 
 
 def test_고치는_화면의_뒤로는_고친_내용을_담고_요약으로():
@@ -116,7 +116,7 @@ def test_고치는_화면의_뒤로는_고친_내용을_담고_요약으로():
 def test_가는_곳_더하기_버튼은_하나():
     client = TestClient(app)
     page = to_step4(client)
-    assert "알바도 있어요" not in text_of(page) and "가는 곳 더하기" in text_of(page)
+    assert "알바도 있어요" not in text_of(page) and "장소 추가하기" in text_of(page)
     added = press(client, page, "add_routine")
     assert [r["name"] for r in draft_of(added)["routines"]] == ["학교", ""]
     assert 'placeholder="예: 알바, 학원"' in added

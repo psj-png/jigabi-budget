@@ -5,7 +5,7 @@ from datetime import date
 
 from app import calc, queries
 
-# 화면에서 [+ 하나 더]로 늘릴 수 있는 최대 줄 수
+# 화면에서 [+]·[장소 추가하기]로 늘릴 수 있는 최대 줄 수
 INCOME_ROWS = 5   # 돈 들어오는 날
 FIXED_ROWS = 6    # 고정비
 ROUTINE_ROWS = 4  # 가는 곳
@@ -268,7 +268,7 @@ def take_step(d, form, step, editing):
 
 
 def apply_op(d, op):
-    # 줄 더하기·빼기, 없어요 같은 버튼. 처리했으면 True
+    # 줄 더하기·빼기 버튼. 처리했으면 True
     kind, _, arg = op.partition(":")
     index = int(arg) if arg.isdigit() else -1
     if kind == "add_income" and len(d["incomes"]) < INCOME_ROWS:
@@ -289,8 +289,6 @@ def apply_op(d, op):
                               "start": "", "end": ""})
     elif kind == "del_routine" and 0 <= index < len(d["routines"]):
         del d["routines"][index]
-    elif kind == "no_routine":
-        d["routines"] = []
     else:
         return False
     return True

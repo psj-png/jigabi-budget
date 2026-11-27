@@ -158,7 +158,7 @@ def test_첫_설정_줄_더하고_빼기():
     assert d["main"] == "" and len(d["incomes"]) == 1
     assert setup.apply_op(d, "del_fixed:0") and d["fixed"] == []
     assert setup.apply_op(d, "add_routine") and [r["name"] for r in d["routines"]] == ["학교", ""]
-    assert setup.apply_op(d, "no_routine") and d["routines"] == []
+    assert setup.apply_op(d, "del_routine:1") and [r["name"] for r in d["routines"]] == ["학교"]
     assert not setup.apply_op(d, "모르는_버튼")
     # 최대 줄 수를 넘기지 않는다
     for _ in range(10):
