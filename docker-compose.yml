@@ -9,6 +9,13 @@ services:
       # 처음 실행할 때 db/ 안의 .sql 파일이 이름 순서대로 들어감 (schema → seed)
       - ./db:/docker-entrypoint-initdb.d
       - db_data:/var/lib/mysql
+    healthcheck:
+      # 처음 실행 때 schema·seed를 넣는 동안은 TCP 접속이 안 되고, 다 넣고 진짜 서버가 뜨면 통과한다
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
 
   web:
     build: .
@@ -24,7 +31,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-6.1-terra}
     depends_on:
-      - db
+      db:
+        condition: service_healthy  # DB가 준비되기 전에 열면 오류 화면이 나와서 기다린다
 
 volumes:
   db_data:
