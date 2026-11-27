@@ -517,3 +517,7 @@ h1, h2, .big-money, .top h1, .page-title h1 { letter-spacing: -0.5px; }
 /* 아래 메뉴: 고른 칸은 아이콘 뒤에 알약 */
 .tabbar a[aria-current="page"] svg { box-sizing: content-box; padding: 3px 14px; border-radius: 14px; background: var(--blue-soft); stroke-width: 2.2; }
 
+/* 11/28 시작 화면 목록: 한 칸에 하나씩 */
+.start-list { display: flex; flex-direction: column; gap: 8px; }
+.start-list li.card { margin: 0; padding: 14px 16px; align-items: center; }
+
