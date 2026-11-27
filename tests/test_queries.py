@@ -929,3 +929,27 @@ def test_주_수입은_한_사람에_하나만(conn):
         queries.insert_income(conn, user_id, "용돈2", 6, 10000)
     finally:
         queries.delete_user(conn, user_id)
+
+
+def test_둘러보기가_내_쿠키를_덮어쓰지_않는다(conn):
+    from starlette.requests import Request
+
+    from app import main
+
+    def request(**cookies):  # 브라우저가 보낸 쿠키만 흉내 낸다
+        header = "; ".join(f"{k}={v}" for k, v in cookies.items()).encode()
+        return Request({"type": "http", "headers": [(b"cookie", header)]})
+
+    user_id, public_id = setup.create_account(conn, SEED_LIKE, date(2026, 10, 30))
+    try:
+        start = main.demo().headers.getlist("set-cookie")  # /demo는 표시 쿠키만 심는다
+        assert len(start) == 1 and start[0].startswith("jigabi_demo=1")
+        assert main.current_user(request(jigabi_id=public_id, jigabi_demo="1")) == USER_ID  # 둘러보는 중엔 예시 사람
+        out = main.demo_exit(request(jigabi_id=public_id, jigabi_demo="1"))
+        cookies = out.headers.getlist("set-cookie")
+        assert out.headers["location"] == "/"
+        assert len(cookies) == 1 and cookies[0].startswith("jigabi_demo=") and "Max-Age=0" in cookies[0]
+        assert main.current_user(request(jigabi_id=public_id)) == user_id  # 홈은 내 사람 그대로
+        assert main.demo_exit(request()).headers["location"] == "/setup"  # 내 기록이 없으면 첫 설정으로
+    finally:
+        queries.delete_user(conn, user_id)

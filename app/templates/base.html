@@ -15,7 +15,7 @@
 <div class="app{% if no_nav %} no-nav{% endif %}">
 {# 예시로 보는 중 띠 (흐름 1-2): 어느 화면에서든 빠져나갈 길이 보인다. 닫기 없음 #}
 {% if demo and not hide_demo_bar %}
-<div class="demo-bar"><span>예시로 보는 중 · 김대학 씨의 11월</span><a href="/setup">내 걸로 시작하기</a></div>
+<div class="demo-bar"><span>예시로 보는 중 · 김대학 씨의 11월</span><a href="/demo/exit">내 걸로 시작하기</a></div>
 {% endif %}
 {% block content %}{% endblock %}
 </div>
@@ -39,7 +39,7 @@
 <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
   <h2 id="sheet-title">내 걸로 시작할까요?</h2>
   <p>예시라서 저장되지 않아요. 내 걸로 시작하면 2분이면 돼요.</p>
-  <a class="btn" href="/setup">시작하기</a>
+  <a class="btn" href="/demo/exit">시작하기</a>
   <a class="btn btn-sub" href="{{ sheet_close }}">계속 둘러보기</a>
 </section>
 {% endif %}

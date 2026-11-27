@@ -15,6 +15,7 @@ from app.db import get_conn
 from app.home import make_home
 
 COOKIE_NAME = "jigabi_id"
+DEMO_COOKIE = "jigabi_demo"  # 둘러보기 중 표시. 내 쿠키(jigabi_id)는 건드리지 않는다
 # db/seed.sql 예시 사람의 public_id
 SEED_PUBLIC_ID = "3f6b2a1c-7d4e-4b8a-9c2d-1e5f6a7b8c9d"
 # 예시 사람은 이 날로 고정해서 보여준다 (R16): seed 기간 10/30~11/24의 둘째 날
@@ -22,7 +23,7 @@ DEMO_TODAY = date(2026, 10, 31)
 
 
 def is_demo(request):
-    return request.cookies.get(COOKIE_NAME) == SEED_PUBLIC_ID
+    return request.cookies.get(DEMO_COOKIE) == "1"
 
 
 def drop_params(path, query, names):
@@ -64,9 +65,8 @@ templates = Jinja2Templates(directory="app/templates", context_processors=[page_
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
-def current_user(request):
-    # 쿠키의 public_id로 user_id를 찾는다. 쿠키가 없거나 모르는 ID면 None
-    public_id = request.cookies.get(COOKIE_NAME)
+def find_user(public_id):
+    # public_id로 user_id를 찾는다. 없거나 모르는 ID면 None
     if not public_id:
         return None
     conn = get_conn()
@@ -74,6 +74,17 @@ def current_user(request):
         return queries.get_user_id(conn, public_id)
     finally:
         conn.close()
+
+
+def my_user(request):
+    # jigabi_id 쿠키의 사람. 예전에 심어진 예시 사람 ID는 내 기록이 아니라서 없는 걸로 본다
+    public_id = request.cookies.get(COOKIE_NAME)
+    return None if public_id == SEED_PUBLIC_ID else find_user(public_id)
+
+
+def current_user(request):
+    # 둘러보기 중이면 예시 사람, 아니면 내 쿠키의 사람. 없으면 None
+    return find_user(SEED_PUBLIC_ID) if is_demo(request) else my_user(request)
 
 
 def to_start():
@@ -133,9 +144,17 @@ def start(request: Request, today: str = None):
 
 @app.get("/demo")
 def demo(today: str = None):
-    # 예시로 먼저 해 보기: 쿠키를 심고 홈으로 (날짜는 DEMO_TODAY로 고정된다)
+    # 예시로 먼저 해 보기: 표시 쿠키만 심고 홈으로 (날짜는 DEMO_TODAY로 고정된다). 내 쿠키는 그대로
     response = RedirectResponse("/" + (f"?today={today}" if today else ""), status_code=303)
-    set_login_cookie(response, SEED_PUBLIC_ID)
+    response.set_cookie(DEMO_COOKIE, "1", httponly=True, samesite="lax")
+    return response
+
+
+@app.get("/demo/exit")
+def demo_exit(request: Request):
+    # 둘러보기 끝: 내 기록이 있으면 홈으로, 없으면 첫 설정으로
+    response = RedirectResponse("/" if my_user(request) else "/setup", status_code=303)
+    response.delete_cookie(DEMO_COOKIE)
     return response
 
 
@@ -224,6 +243,7 @@ async def setup_done(request: Request):
     # 완료하면 바로 홈으로 ('준비 끝' 띠). 기록은 이 브라우저 쿠키에만 묶인다 (R19)
     response = RedirectResponse(url_with("/", today, toast="ready"), status_code=303)
     set_login_cookie(response, public_id)
+    response.delete_cookie(DEMO_COOKIE)
     return response
 
 
