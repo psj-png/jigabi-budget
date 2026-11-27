@@ -42,7 +42,6 @@
   {% elif step == 2 %}
   {# 2/5 돈 들어오는 날 #}
   <h1 class="split-title">돈이 들어오는 날을 알려 주세요</h1>
-  <p class="top-sub" style="margin-top: 0">기간 기준으로 고른 날부터 다음 그날 전까지를 한 기간으로 봐요.</p>
   <section class="card">
     {% for row in d.incomes %}
     {% set i = loop.index0 %}
@@ -52,7 +51,6 @@
         <button type="submit" class="btn-small" name="go" value="del_income:{{ i }}" formnovalidate>빼기</button>
       </div>
       <div class="pair">매달 <input class="day" type="number" name="inc_day" value="{{ row.day }}" min="1" max="31" aria-label="매달 며칠">일 <input class="amt" type="number" name="inc_amount" value="{{ row.amount }}" min="0" aria-label="금액">원</div>
-      <label class="main-pick"><input type="radio" name="main" value="{{ i }}"{% if d.main == i|string %} checked{% endif %}> 기간 기준</label>
       {% if row in example_incomes %}<span class="example-tag">예시 값이에요. 내 금액으로 바꿔 주세요</span>{% endif %}
     </div>
     {% else %}

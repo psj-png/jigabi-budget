@@ -65,20 +65,26 @@ def test_수입이_없으면_막는다():
     fields["inc_amount"] = ["", "", ""]
     with pytest.raises(setup.FormError) as e:
         setup.parse_step1(make_form(**fields))
-    assert str(e.value) == "돈 들어오는 날을 하나 이상 넣고, 기간 기준을 골라 주세요"
+    assert str(e.value) == "돈 들어오는 날을 하나 이상 넣어 주세요"
 
 
-def test_기간_기준을_안_고르면_막는다():
+def test_기간_시작일은_가장_큰_수입의_날():
     fields = dict(SEED_STEP1)
-    del fields["main"]
-    with pytest.raises(setup.FormError) as e:
-        setup.parse_step1(make_form(**fields))
-    assert str(e.value) == setup.NO_INCOME
+    del fields["main"]  # 화면에서 고르지 않는다: 앱이 정한다
+    fields["inc_name"] = ["용돈", "알바비", "장학금"]
+    fields["inc_day"] = ["1", "25", "15"]
+    fields["inc_amount"] = ["250000", "400000", "400000"]
+    data = setup.parse_step1(make_form(**fields))
+    # 금액이 가장 큰 건 알바비·장학금 (같다) -> 위에 적은 알바비
+    assert [(i["name"], i["is_main"]) for i in data["incomes"]] == [("용돈", False), ("알바비", True), ("장학금", False)]
+    assert setup.first_period(data, date(2026, 11, 27))[1] == date(2026, 12, 24)
 
-    # 빈 줄(2번째 줄이 아닌 3번째)을 기준으로 골라도 막는다
-    fields["main"] = "2"
-    with pytest.raises(setup.FormError):
-        setup.parse_step1(make_form(**fields))
+
+def test_직접_고르지_않아도_막지_않는다():
+    fields = dict(SEED_STEP1)
+    fields["main"] = "2"  # 빈 줄을 가리키면 없는 걸로 보고 앱이 정한다
+    data = setup.parse_step1(make_form(**fields))
+    assert [i["is_main"] for i in data["incomes"]] == [True, False]
 
 
 def test_매달_며칠은_1부터_31():
@@ -148,8 +154,8 @@ def test_첫_설정_줄_더하고_빼기():
     d["main"] = "1"
     assert setup.apply_op(d, "del_income:0")  # 기준 줄 앞을 빼면 기준 번호도 당겨진다
     assert d["main"] == "0" and d["incomes"][0]["name"] == "용돈"
-    assert setup.apply_op(d, "del_income:0")  # 기준 줄을 빼면 남은 첫 줄이 기준
-    assert d["main"] == "0" and len(d["incomes"]) == 1
+    assert setup.apply_op(d, "del_income:0")  # 고른 줄을 빼면 다시 앱이 정한다
+    assert d["main"] == "" and len(d["incomes"]) == 1
     assert setup.apply_op(d, "no_fixed") and d["fixed"] == []
     assert setup.apply_op(d, "add_alba") and [r["name"] for r in d["routines"]] == ["학교", "알바"]
     assert setup.apply_op(d, "no_routine") and d["routines"] == []
@@ -166,10 +172,7 @@ def test_단계마다_검사():
         setup.check_step(d, 1)  # 잔액은 비어 있다
     d["balance"] = "290000"
     setup.check_step(d, 1)
-    d["main"] = ""
-    with pytest.raises(setup.FormError, match="기간 기준"):
-        setup.check_step(d, 2)
-    d["main"] = "0"
+    setup.check_step(d, 2)  # 기간 시작일은 앱이 정하니 안 골라도 된다
     d["routines"][0]["wds"] = []  # 요일이 없으면 빈 줄로 본다
     setup.check_step(d, 4)
     assert setup.draft_data(d)["routines"] == []

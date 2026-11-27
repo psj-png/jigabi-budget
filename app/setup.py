@@ -11,7 +11,7 @@ FIXED_ROWS = 6    # 고정비
 ROUTINE_ROWS = 4  # 가는 곳
 MAX_MONEY = 1_000_000_000
 
-NO_INCOME = "돈 들어오는 날을 하나 이상 넣고, 기간 기준을 골라 주세요"
+NO_INCOME = "돈 들어오는 날을 하나 이상 넣어 주세요"
 
 
 class FormError(Exception):
@@ -55,7 +55,8 @@ def parse_step1(form):
     balance = to_int(form.get("balance"), "지금 잔액", low=-MAX_MONEY)
 
     incomes = []
-    main = form.get("main")
+    rows = []  # incomes[k]가 화면의 몇 번째 줄이었는지
+    main = form.get("main")  # 직접 고른 줄 번호. 비어 있으면 앱이 정한다
     names, days, amounts = form.getlist("inc_name"), form.getlist("inc_day"), form.getlist("inc_amount")
     for i in range(INCOME_ROWS):
         amount = to_int(amounts[i] if i < len(amounts) else "", "돈 들어오는 날의 금액", default=0)
@@ -65,10 +66,17 @@ def parse_step1(form):
             "name": clean_name(names[i] if i < len(names) else "", "돈 들어오는 날"),
             "day_of_month": parse_day(days[i] if i < len(days) else ""),
             "amount": amount,
-            "is_main": main == str(i),
+            "is_main": False,
         })
-    if not incomes or not any(i["is_main"] for i in incomes):
+        rows.append(i)
+    if not incomes:
         raise FormError(NO_INCOME)
+    # 기간 시작일: 직접 고른 줄이 없으면 금액이 가장 큰 수입의 날 (같으면 위에 적은 줄)
+    if main in [str(i) for i in rows]:
+        k = rows.index(int(main))
+    else:
+        k = max(range(len(incomes)), key=lambda n: incomes[n]["amount"])
+    incomes[k]["is_main"] = True
 
     fixed = []
     names, days, amounts = form.getlist("fix_name"), form.getlist("fix_day"), form.getlist("fix_amount")
@@ -175,7 +183,7 @@ WEEKDAYS = "월화수목금토일"
 
 
 def new_draft():
-    return {"balance": "", "incomes": [dict(r) for r in EXAMPLE_INCOMES], "main": "0",
+    return {"balance": "", "incomes": [dict(r) for r in EXAMPLE_INCOMES], "main": "",
             "fixed": [dict(r) for r in EXAMPLE_FIXED], "routines": [dict(SCHOOL, wds=list(SCHOOL["wds"]))],
             "comfort_daily": "10000", "hourly_wage": "10320", "emergency_fund": "0"}
 
@@ -244,7 +252,6 @@ def take_step(d, form, step, editing):
         d["balance"] = (form.get("balance") or "").strip()
     elif step == 2:
         d["incomes"] = _rows(form, "inc")
-        d["main"] = form.get("main") or ""
     elif step == 3:
         d["fixed"] = _rows(form, "fix")
     elif step == 4 and editing:
@@ -271,7 +278,7 @@ def apply_op(d, op):
         del d["incomes"][index]
         main = int(d["main"]) if d["main"].isdigit() else -1
         if main == index:
-            d["main"] = "0" if d["incomes"] else ""  # 기준 줄을 빼면 남은 첫 줄이 기준
+            d["main"] = ""  # 고른 줄을 빼면 다시 앱이 정한다
         elif main > index:
             d["main"] = str(main - 1)
     elif kind == "add_fixed" and len(d["fixed"]) < FIXED_ROWS:
