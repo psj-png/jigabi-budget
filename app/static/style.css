@@ -438,6 +438,10 @@ details.more[open] > summary { margin-bottom: 8px; }
 
 /* 지갑이 채팅 (R21) */
 .fab { position: fixed; right: max(16px, calc(50% - 194px)); bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 14; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--blue); color: #FFFFFF; box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35); }
+/* 채팅 버튼이 입력칸을 가리지 않게: 입력칸에 포커스가 있으면 숨긴다 */
+body:has(input:focus, textarea:focus) .fab { display: none; }
+/* 채팅 버튼이 있는 화면: 끝까지 내리면 마지막 버튼이 채팅 버튼(아래 80px + 높이 56px)보다 16px 위에 오게 */
+.app:has(.fab) { padding-bottom: calc(80px + 56px + 16px + env(safe-area-inset-bottom)); }
 .fab svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .row-link { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding-left: 8px; font-size: 12px; font-weight: 700; color: var(--blue-dark); }
 .chat { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
