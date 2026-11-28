@@ -1,4 +1,4 @@
-# 인덱스 실험 결과 (DB 보고서 Evaluation)
+# 인덱스 실험 결과
 
 - MySQL 8.4.13, 새 DB `jigabi_bench`(schema.sql 그대로), 합성 데이터 `db/make_synth.py` (seed 42)
 - 쿼리마다 예열 1번 뒤 20번 돌린 시간의 중앙값. 읽은 행은 EXPLAIN ANALYZE 맨 아래(실제로 읽는 곳)의 실제 행 수

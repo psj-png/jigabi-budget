@@ -1,4 +1,4 @@
-# 인덱스 전후 재기 (DB 보고서 Evaluation). jigabi_bench에서만 돌리고, 결과는 docs/bench.md에 저장한다
+# 인덱스 전후 재기. jigabi_bench에서만 돌리고, 결과는 docs/bench.md에 저장한다
 # 순서: schema.sql 그대로(A 후, B 전)를 재고 -> 인덱스를 바꿔서(A 전, B 후) 다시 잰다
 import re
 import statistics
@@ -161,7 +161,7 @@ def main():
     for name, (start, end) in [("학기", make_synth.SEMESTER), ("4년", make_synth.FOUR_YEARS)]:
         info, res = run_scale(name, start, end)
         parts.append(section(name, info, res))
-    text = ["# 인덱스 실험 결과 (DB 보고서 Evaluation)", "",
+    text = ["# 인덱스 실험 결과", "",
             f"- MySQL {version}, 새 DB `jigabi_bench`(schema.sql 그대로), 합성 데이터 `db/make_synth.py` (seed 42)",
             f"- 쿼리마다 예열 1번 뒤 {RUNS}번 돌린 시간의 중앙값. 읽은 행은 EXPLAIN ANALYZE 맨 아래(실제로 읽는 곳)의 실제 행 수",
             "- Handler_read_*는 FLUSH STATUS 뒤 쿼리를 한 번 돌린 값", "",
